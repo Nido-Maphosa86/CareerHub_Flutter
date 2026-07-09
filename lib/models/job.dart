@@ -1,6 +1,6 @@
 // lib/models/job.dart
 //
-// FILE SUMMARY
+// FILE SUMMARY (easy English)
 // This file describes one job advert in CareerHub. It is a plain Dart class
 // with no Flutter code inside it, so the very same model works for the screen
 // today and for real API data in Week 2 without changing shape. It decides
@@ -9,6 +9,7 @@
 // (a closed listing and a fully remote listing), and provides three helpers the
 // screen relies on: canApply (may a seeker apply right now?), displaySalary
 // (the exact salary text to show), and toString (a readable line for debugging).
+// Unchanged since Assignment 1.1 on purpose: the model shape stays stable.
 
 class Job {
   // ---------- REQUIRED FIELDS ----------
@@ -41,10 +42,8 @@ class Job {
 
   // ---------- NAMED CONSTRUCTOR 1: a closed listing ----------
   // Business reason: an employer has stopped accepting applications, but the
-  // advert must still appear (in their own dashboard, or in a seeker's history).
-  // This constructor hard-sets isOpen to false by redirecting into the default
-  // constructor, so a closed job can never be created by accident as still open.
-  // The caller never passes isOpen for a closed job.
+  // advert must still appear. Hard-sets isOpen to false so a closed job can
+  // never be created by accident as still open.
   Job.closed({
     required String title,
     required String company,
@@ -66,9 +65,7 @@ class Job {
 
   // ---------- NAMED CONSTRUCTOR 2: a fully remote listing ----------
   // Business reason: a remote role has no physical office, so its location is
-  // always "Remote". This constructor fixes location to "Remote" so remote
-  // adverts are labelled the same way everywhere, instead of drifting between
-  // "remote", "WFH" and "Remote". The caller never passes a location.
+  // always "Remote". Fixes location so remote adverts are labelled consistently.
   Job.remote({
     required String title,
     required String company,
@@ -89,28 +86,23 @@ class Job {
         );
 
   // ---------- GETTER: canApply ----------
-  // The single source of truth for "can a job seeker apply to this?".
-  // A seeker may apply only when the listing is open AND its closing date has
-  // not already passed. A listing with no closing date has no deadline, so it
-  // stays applicable while it is open. Keeping this rule on the model means the
-  // widget never has to re-invent it.
+  // True only when the listing is open AND its closing date has not passed.
+  // A listing with no closing date has no deadline, so it stays applicable
+  // while open. Keeping this rule on the model means the widget never re-invents it.
   bool get canApply {
     if (!isOpen) return false;
     final deadline = closingDate;
-    if (deadline == null) return true; // No deadline was set.
-    return DateTime.now().isBefore(deadline); // Still before the closing date.
+    if (deadline == null) return true;
+    return DateTime.now().isBefore(deadline);
   }
 
   // ---------- GETTER: displaySalary ----------
-  // The single source of truth for salary text. If a salary was provided, show
-  // it exactly as stored (it is already a formatted range). If it is missing,
-  // the employer kept pay confidential, so show "Market-related" rather than
-  // letting "null" ever reach the screen.
+  // The only place salary text is decided. Shows the stored range, or
+  // "Market-related" when pay was kept confidential, so "null" never reaches the UI.
   String get displaySalary => salary ?? 'Market-related';
 
   // ---------- toString ----------
-  // A short, readable line that identifies a job at a glance during development.
-  // It pulls in status and the closing date so a single print tells the full story.
+  // A short readable line that identifies a job at a glance during development.
   @override
   String toString() {
     final status = isOpen ? 'OPEN' : 'CLOSED';
@@ -121,8 +113,7 @@ class Job {
         '$displaySalary | $status | $closing)';
   }
 
-  // Small private helper: turns a DateTime into a plain YYYY-MM-DD label so the
-  // debug output stays tidy and predictable.
+  // Private helper: turns a DateTime into a plain YYYY-MM-DD label.
   static String _dateLabel(DateTime d) {
     final month = d.month.toString().padLeft(2, '0');
     final day = d.day.toString().padLeft(2, '0');

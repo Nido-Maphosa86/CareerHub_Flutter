@@ -1,9 +1,12 @@
-// This is a basic Flutter widget test.
+// test/widget_test.dart
 //
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// FILE SUMMARY (easy English)
+// This replaces the default counter smoke test. It builds the real CareerHub
+// app and checks the things that matter: the app bar title shows, a known job
+// renders, the job with no salary reads "Market-related" and never "null", and
+// there is one "Closed" badge alongside "Open" ones. It works whether the test
+// window is narrow (list) or wide (grid), because it only checks the content of
+// the cards, not the layout they sit in.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,20 +14,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:careerhub/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('CareerHub home screen renders the job list', (tester) async {
     await tester.pumpWidget(const CareerHubApp());
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Title proves the app is not "Flutter Demo".
+    expect(find.text('CareerHub'), findsWidgets);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // A known fully populated job is on screen.
+    expect(find.text('Senior Flutter Developer'), findsOneWidget);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // The no-salary job falls back to "Market-related", never "null".
+    expect(find.text('Market-related'), findsOneWidget);
+    expect(find.text('null'), findsNothing);
+
+    // The closed job is flagged, so exactly one "Closed" badge exists.
+    expect(find.text('Closed'), findsOneWidget);
+
+    // Open jobs are flagged too.
+    expect(find.text('Open'), findsWidgets);
   });
 }
