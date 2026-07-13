@@ -1,21 +1,26 @@
 // lib/main.dart
 //
-// FILE SUMMARY (easy English)
-// This is the entry point of the app. It starts CareerHub and sets up the look.
-// It now defines two themes from the same deep-green seed colour: a light one
-// and a dark one. themeMode: ThemeMode.system tells the app to follow the
-// phone's own setting, so if the user turns on dark mode in their phone
-// settings, CareerHub switches to dark automatically. Because every widget uses
-// theme colour roles instead of fixed colours, dark mode "just works" with no
-// extra code. The actual screen content lives in HomeScreen, which has moved
-// into its own file under lib/screens/.
+// FILE SUMMARY 
+// This is the entry point of the app. Two jobs here.
+//
+// First, it wraps the whole app in a ProviderScope. That is the container where
+// Riverpod keeps every provider's value. Without it, any widget that tries to
+// read state would throw, because there would be nowhere for that state to live.
+// It must sit above everything, so it goes around the root widget itself.
+//
+// Second, it sets up the look: a light theme and a dark theme built from the
+// same deep-green seed colour, with themeMode: ThemeMode.system so the app
+// follows whatever the phone is set to. Because every widget uses theme colour
+// roles instead of fixed colours, dark mode needs no extra code anywhere else.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'screens/home_screen.dart';
 
 void main() {
-  runApp(const CareerHubApp());
+  // ProviderScope holds the state for every provider in the app.
+  runApp(const ProviderScope(child: CareerHubApp()));
 }
 
 class CareerHubApp extends StatelessWidget {

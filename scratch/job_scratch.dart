@@ -1,6 +1,6 @@
 // scratch/job_scratch.dart
 //
-// FILE SUMMARY (easy English)
+// 
 // A throwaway test file kept out of lib/ so it never ships inside the app. It
 // builds the same four jobs the home screen uses and prints each one's
 // toString, canApply, and displaySalary, so you can see a closed job cannot be
@@ -8,8 +8,7 @@
 //
 // Run it from the project root with:  dart run scratch/job_scratch.dart
 
-
-import 'package:careerhub/models/job.dart';
+import '../lib/models/job.dart';
 
 void main() {
   final fullyPopulated = Job(
@@ -23,7 +22,7 @@ void main() {
     description: 'Build and ship customer-facing mobile features.',
   );
 
-  final requiredOnly = Job(
+  const requiredOnly = Job(
     title: 'Junior Mobile Developer',
     company: 'Praelexis',
     location: 'Stellenbosch',

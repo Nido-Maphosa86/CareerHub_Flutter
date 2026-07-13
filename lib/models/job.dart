@@ -1,6 +1,6 @@
 // lib/models/job.dart
 //
-// FILE SUMMARY (easy English)
+// FILE SUMMARY
 // This file describes one job advert in CareerHub. It is a plain Dart class
 // with no Flutter code inside it, so the very same model works for the screen
 // today and for real API data in Week 2 without changing shape. It decides
