@@ -37,6 +37,7 @@ const List<String> kFilterLabels = [
 
 // Toggle for the error branch. Flip this to true and the jobs provider throws
 // instead of returning data, which lets us see and test the error UI.
+//the first value  is false
 final shouldFailProvider = StateProvider<bool>((ref) => false);
 
 // ---------------------------------------------------------------------------
@@ -44,9 +45,9 @@ final shouldFailProvider = StateProvider<bool>((ref) => false);
 // ---------------------------------------------------------------------------
 // FutureProvider because the value arrives later and might fail. Riverpod wraps
 // the result in an AsyncValue, which is either loading, error, or data. In
-// Week 2 the body of this function is replaced by a real API call and nothing
-// else in the app has to change.
+// other words, the screen can watch this one provider and get all three states
 final jobsProvider = FutureProvider<List<Job>>((ref) async {
+
   // Watching this means flipping the switch re-runs the fetch automatically.
   final shouldFail = ref.watch(shouldFailProvider);
 
@@ -65,6 +66,7 @@ final jobsProvider = FutureProvider<List<Job>>((ref) async {
 // ---------------------------------------------------------------------------
 // StateProvider because this is one plain value that the UI sets directly when
 // a chip is tapped. There is no logic here beyond "remember what was chosen".
+// The default is "All" so the first chip is selected when the app starts.
 final selectedFilterProvider = StateProvider<String>((ref) => kFilterAll);
 
 // ---------------------------------------------------------------------------
