@@ -1,95 +1,74 @@
 // lib/providers/job_providers.dart
 //
-// FILE SUMMARY 
 // This file holds all the app's state. The screen no longer owns the job list;
-// it just watches these providers and draws whatever they say.
-//
-// There are three providers here, and each one has a different job:
-//   1. jobsProvider      - fetches the list of jobs, slowly, like a real server
-//                          would. It can be loading, it can fail, or it can hold
-//                          data, and Riverpod tracks that for us.
-//   2. selectedFilterProvider - remembers which filter chip is currently chosen.
-//                          Just a piece of text like "All" or "Remote".
-//   3. filteredJobsProvider - works out the visible list by combining the other
-//                          two. It is never stored, always calculated, so it can
-//                          never fall out of step with the jobs or the filter.
-//
-// The rule to remember: anything you can calculate from other state should be
-// calculated, not saved. Saving it means keeping two copies in sync by hand,
-// and eventually you forget one.
+// it watches these providers and draws whatever they say. There are the three
+// providers from Assignment 1.3 (the async job list, the selected filter, and the
+// derived filtered list), plus one small addition for navigation: a family
+// provider that finds a single job by its id. That lookup is what the detail
+// screen uses to turn an id from the URL back into a real Job. Every job in the
+// seed data has a unique, stable integer id.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 import '../models/job.dart';
 
-// The filter labels the chip row shows. Kept here next to the filter logic so
-// the labels and the matching rules can never drift apart.
+// Filter labels shown by the chip row, kept next to the filter logic so labels
+// and matching rules can never drift apart.
 const String kFilterAll = 'All';
 const String kFilterRemote = 'Remote';
 const String kFilterFullTime = 'Full-time';
 
-const List<String> kFilterLabels = [
-  kFilterAll,
-  kFilterRemote,
-  kFilterFullTime,
-];
+const List<String> kFilterLabels = [kFilterAll, kFilterRemote, kFilterFullTime];
 
-// Toggle for the error branch. Flip this to true and the jobs provider throws
-// instead of returning data, which lets us see and test the error UI.
+// Flip to true to make the jobs load fail, so the error UI can be seen and tested.
 final shouldFailProvider = StateProvider<bool>((ref) => false);
 
-// ---------------------------------------------------------------------------
-// 1. THE JOB LIST (async)
-// ---------------------------------------------------------------------------
-// FutureProvider because the value arrives later and might fail. Riverpod wraps
-// the result in an AsyncValue, which is either loading, error, or data. In
-// Week 2 the body of this function is replaced by a real API call and nothing
-// else in the app has to change.
+// The job list, loaded asynchronously. FutureProvider wraps the result in an
+// AsyncValue carrying loading, error, and data states. In Week 2 the body becomes
+// a real API call and nothing else changes.
 final jobsProvider = FutureProvider<List<Job>>((ref) async {
-  // Watching this means flipping the switch re-runs the fetch automatically.
   final shouldFail = ref.watch(shouldFailProvider);
-
-  // Pretend we are talking to a slow server so the loading spinner is visible.
   await Future.delayed(const Duration(milliseconds: 1500));
-
   if (shouldFail) {
     throw Exception('Could not reach the CareerHub server.');
   }
-
   return _seedJobs;
 });
 
-// ---------------------------------------------------------------------------
-// 2. THE SELECTED FILTER (simple value)
-// ---------------------------------------------------------------------------
-// StateProvider because this is one plain value that the UI sets directly when
-// a chip is tapped. There is no logic here beyond "remember what was chosen".
+// The currently selected filter label. A single plain value the UI sets on tap.
 final selectedFilterProvider = StateProvider<String>((ref) => kFilterAll);
 
-// ---------------------------------------------------------------------------
-// 3. THE FILTERED LIST (derived)
-// ---------------------------------------------------------------------------
-// A plain Provider that watches the other two and recomputes whenever either
-// changes. It hands back an AsyncValue so the screen can still show loading and
-// error states through a single watch call.
-//
-// Note it never stores a list of its own. That is the whole point: a stored
-// copy could go stale when the jobs reload while a filter is still active.
+// The filtered list, derived from the jobs and the filter. Never stored, always
+// recomputed, so it can never fall out of step with either input.
 final filteredJobsProvider = Provider<AsyncValue<List<Job>>>((ref) {
   final asyncJobs = ref.watch(jobsProvider);
   final filter = ref.watch(selectedFilterProvider);
 
-  // whenData rebuilds the AsyncValue with a new payload, keeping loading and
-  // error states untouched and flowing straight through to the screen.
   return asyncJobs.whenData((jobs) {
     if (filter == kFilterAll) return jobs;
     return jobs.where((job) => _matchesFilter(job, filter)).toList();
   });
 });
 
-// The one place a filter label is turned into a rule about a Job. Each label
-// checks a real field on the model, so a filter can never silently match nothing.
+// Finds one job by its id. This is a family provider: it takes an argument (the
+// id) and returns the matching job, or null if no job has that id. The detail
+// screen uses this to turn the id from the URL back into a real Job. It watches
+// the raw jobsProvider, so a job can be found by id regardless of the current
+// filter. Returns an AsyncValue so the detail screen can still show loading and
+// error states through a single watch.
+final jobByIdProvider = Provider.family<AsyncValue<Job?>, int>((ref, id) {
+  final asyncJobs = ref.watch(jobsProvider);
+  return asyncJobs.whenData((jobs) {
+    for (final job in jobs) {
+      if (job.id == id) return job;
+    }
+    return null; // no job with this id (e.g. a stale or mistyped URL)
+  });
+});
+
+// The one place a filter label becomes a rule about a Job. Each label checks a
+// real field on the model, so a filter can never silently match nothing.
 bool _matchesFilter(Job job, String filter) {
   switch (filter) {
     case kFilterRemote:
@@ -101,15 +80,12 @@ bool _matchesFilter(Job job, String filter) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// THE DATA
-// ---------------------------------------------------------------------------
-// The four job variants, moved out of HomeScreen so the widget no longer owns
-// any data. At least one job matches each filter label: Luno is Remote, and
-// Yoco and BBD are Full-time.
+// The seed data, moved out of the screen. Each job has a unique, stable id. At
+// least one job matches each filter label: Luno is Remote; Yoco and BBD are
+// Full-time.
 final List<Job> _seedJobs = [
-  // 1. Fully populated, open.
   Job(
+    id: 1,
     title: 'Senior Flutter Developer',
     company: 'Yoco',
     location: 'Cape Town',
@@ -121,18 +97,16 @@ final List<Job> _seedJobs = [
         'Build and ship customer-facing mobile features across iOS and '
         'Android, and help shape the design system the whole team uses.',
   ),
-
-  // 2. Open with no salary: only the required fields are given.
   const Job(
+    id: 2,
     title: 'Junior Mobile Developer',
     company: 'Praelexis',
     location: 'Stellenbosch',
     employmentType: 'Internship',
     isOpen: true,
   ),
-
-  // 3. Closed, via the named constructor.
   Job.closed(
+    id: 3,
     title: 'Backend Engineer (.NET)',
     company: 'BBD',
     location: 'Johannesburg',
@@ -142,9 +116,8 @@ final List<Job> _seedJobs = [
     description:
         'Design and maintain APIs powering a national payments platform.',
   ),
-
-  // 4. Remote, via the other named constructor.
   Job.remote(
+    id: 4,
     title: 'Flutter Developer',
     company: 'Luno',
     employmentType: 'Contract',
