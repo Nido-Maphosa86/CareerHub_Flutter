@@ -1,10 +1,9 @@
 // scratch/job_scratch.dart
 //
-// 
 // A throwaway test file kept out of lib/ so it never ships inside the app. It
-// builds the same four jobs the home screen uses and prints each one's
-// toString, canApply, and displaySalary, so you can see a closed job cannot be
-// applied to and a job with no salary reads "Market-related" instead of "null".
+// builds a few jobs and prints each one's toString, canApply, and displaySalary,
+// so you can see a closed job cannot be applied to and a job with no salary reads
+// "Market-related" instead of "null". Each job now carries a unique id.
 //
 // Run it from the project root with:  dart run scratch/job_scratch.dart
 
@@ -12,6 +11,7 @@ import '../lib/models/job.dart';
 
 void main() {
   final fullyPopulated = Job(
+    id: 1,
     title: 'Senior Flutter Developer',
     company: 'Yoco',
     location: 'Cape Town',
@@ -23,6 +23,7 @@ void main() {
   );
 
   const requiredOnly = Job(
+    id: 2,
     title: 'Junior Mobile Developer',
     company: 'Praelexis',
     location: 'Stellenbosch',
@@ -31,6 +32,7 @@ void main() {
   );
 
   final closed = Job.closed(
+    id: 3,
     title: 'Backend Engineer (.NET)',
     company: 'BBD',
     location: 'Johannesburg',
@@ -40,6 +42,7 @@ void main() {
   );
 
   final remote = Job.remote(
+    id: 4,
     title: 'Flutter Developer',
     company: 'Luno',
     employmentType: 'Contract',

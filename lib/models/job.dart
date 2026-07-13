@@ -1,35 +1,34 @@
 // lib/models/job.dart
 //
-// FILE SUMMARY
-// This file describes one job advert in CareerHub. It is a plain Dart class
-// with no Flutter code inside it, so the very same model works for the screen
-// today and for real API data in Week 2 without changing shape. It decides
-// which fields must always be present and which are allowed to be missing,
-// gives two named constructors for the two special ways a job can be created
-// (a closed listing and a fully remote listing), and provides three helpers the
-// screen relies on: canApply (may a seeker apply right now?), displaySalary
-// (the exact salary text to show), and toString (a readable line for debugging).
-// Unchanged since Assignment 1.1 on purpose: the model shape stays stable.
+// This file describes one job advert in CareerHub. It is a plain Dart class with
+// no Flutter code inside it, so the same model works for the screen today and for
+// real API data in Week 2 without changing shape. It now carries a stable integer
+// id, which is the value used to build a job's URL (/jobs/<id>) and to look a job
+// up again later, so a job is always identified by who it is rather than where it
+// happens to sit in a list. It decides which fields are always present and which
+// may be missing, offers two named constructors for the two special ways a job is
+// created (closed and remote), and exposes three helpers the UI relies on:
+// canApply, displaySalary, and toString.
 
 class Job {
-  // ---------- REQUIRED FIELDS ----------
-  // These can never be missing, so they are non-nullable.
-  final String title; // The role name, e.g. "Flutter Developer".
-  final String company; // The employer hiring for the role.
-  final String location; // Where the work happens. "Remote" is a valid value.
-  final String employmentType; // e.g. Full-time, Part-time, Contract.
-  final bool isOpen; // true while applications are still being accepted.
+  // A stable, unique identifier for this job. Unlike a list position, it never
+  // changes when the list is filtered or reordered, so it is safe to put in a URL.
+  final int id;
 
-  // ---------- OPTIONAL FIELDS ----------
-  // These may legitimately be absent on a real listing, so they are nullable.
-  final String? salary; // A ready-to-show pay range, or null if confidential.
-  final DateTime? closingDate; // Last day to apply, or null if there is no deadline.
-  final String? description; // Full advert text, or null while the listing is a draft.
+  // Required fields: never missing, so non-nullable.
+  final String title;
+  final String company;
+  final String location; // "Remote" is a valid value.
+  final String employmentType;
+  final bool isOpen;
 
-  // ---------- DEFAULT CONSTRUCTOR ----------
-  // Marked const so Flutter can build and cache Job objects cheaply when every
-  // value is known ahead of time.
+  // Optional fields: may legitimately be absent, so nullable.
+  final String? salary;
+  final DateTime? closingDate;
+  final String? description;
+
   const Job({
+    required this.id,
     required this.title,
     required this.company,
     required this.location,
@@ -40,11 +39,10 @@ class Job {
     this.description,
   });
 
-  // ---------- NAMED CONSTRUCTOR 1: a closed listing ----------
-  // Business reason: an employer has stopped accepting applications, but the
-  // advert must still appear. Hard-sets isOpen to false so a closed job can
-  // never be created by accident as still open.
+  // A closed listing: applications have stopped, but the advert stays visible.
+  // Hard-sets isOpen to false so a closed job can never be built as still open.
   Job.closed({
+    required int id,
     required String title,
     required String company,
     required String location,
@@ -53,6 +51,7 @@ class Job {
     DateTime? closingDate,
     String? description,
   }) : this(
+          id: id,
           title: title,
           company: company,
           location: location,
@@ -63,10 +62,10 @@ class Job {
           description: description,
         );
 
-  // ---------- NAMED CONSTRUCTOR 2: a fully remote listing ----------
-  // Business reason: a remote role has no physical office, so its location is
-  // always "Remote". Fixes location so remote adverts are labelled consistently.
+  // A fully remote listing: fixes location to "Remote" so remote adverts are
+  // labelled consistently everywhere.
   Job.remote({
+    required int id,
     required String title,
     required String company,
     required String employmentType,
@@ -75,6 +74,7 @@ class Job {
     DateTime? closingDate,
     String? description,
   }) : this(
+          id: id,
           title: title,
           company: company,
           location: 'Remote',
@@ -85,10 +85,7 @@ class Job {
           description: description,
         );
 
-  // ---------- GETTER: canApply ----------
-  // True only when the listing is open AND its closing date has not passed.
-  // A listing with no closing date has no deadline, so it stays applicable
-  // while open. Keeping this rule on the model means the widget never re-invents it.
+  // True only when the listing is open and its closing date has not passed.
   bool get canApply {
     if (!isOpen) return false;
     final deadline = closingDate;
@@ -96,24 +93,20 @@ class Job {
     return DateTime.now().isBefore(deadline);
   }
 
-  // ---------- GETTER: displaySalary ----------
-  // The only place salary text is decided. Shows the stored range, or
-  // "Market-related" when pay was kept confidential, so "null" never reaches the UI.
+  // The only place salary text is decided: the stored range, or "Market-related"
+  // when pay was kept confidential, so "null" never reaches the UI.
   String get displaySalary => salary ?? 'Market-related';
 
-  // ---------- toString ----------
-  // A short readable line that identifies a job at a glance during development.
   @override
   String toString() {
     final status = isOpen ? 'OPEN' : 'CLOSED';
     final closing = closingDate == null
         ? 'no closing date'
         : 'closes ${_dateLabel(closingDate!)}';
-    return 'Job($title @ $company | $location | $employmentType | '
+    return 'Job(#$id $title @ $company | $location | $employmentType | '
         '$displaySalary | $status | $closing)';
   }
 
-  // Private helper: turns a DateTime into a plain YYYY-MM-DD label.
   static String _dateLabel(DateTime d) {
     final month = d.month.toString().padLeft(2, '0');
     final day = d.day.toString().padLeft(2, '0');
