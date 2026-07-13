@@ -138,7 +138,7 @@ No other test changes are needed because these labels do not match any existing 
 
 ### Screenshots
 
-Add these screenshots:
+
 - Filter stays selected after opening a job and pressing Back.
 - Open a job, switch to Saved, switch back to Jobs, then press Back to return to the jobs list.
 - Loading screen with spinner.
