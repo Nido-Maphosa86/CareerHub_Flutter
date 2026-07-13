@@ -1,6 +1,5 @@
 // lib/widgets/job_card.dart
 //
-// FILE SUMMARY
 // This is the card that shows one job. It takes a whole Job object and draws it.
 // A full-height coloured stripe runs down the left edge: it lights up for jobs
 // you can still apply to and goes muted for closed ones, so open versus closed
@@ -10,7 +9,9 @@
 // an absent field leaves no empty label and no gap. Every colour is a theme
 // colour role and every text size is a theme text style, so the card looks
 // correct in light and dark mode without any hardcoded values. The Open/Closed
-// pill now lives in its own JobStatusBadge widget instead of being inline here.
+// pill lives in its own JobStatusBadge widget. The card can be given an optional
+// onTap so the screen decides where a tap goes (here, to the job's detail URL),
+// while the card itself stays a plain presentational widget.
 
 import 'package:flutter/material.dart';
 
@@ -20,7 +21,11 @@ import 'job_status_badge.dart';
 class JobCard extends StatelessWidget {
   final Job job;
 
-  const JobCard({super.key, required this.job});
+  // What happens when the card is tapped. Optional, so the card is still usable
+  // in places where it is not meant to navigate.
+  final VoidCallback? onTap;
+
+  const JobCard({super.key, required this.job, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -37,10 +42,14 @@ class JobCard extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      // InkWell gives the tap a ripple and calls onTap. Placed inside the Card so
+      // the ripple is clipped to the rounded corners.
+      child: InkWell(
+        onTap: onTap,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             // The status stripe. Colour alone communicates open vs closed.
             Container(width: 6, color: stripeColor),
 
@@ -177,6 +186,7 @@ class JobCard extends StatelessWidget {
               ),
             ),
           ],
+          ),
         ),
       ),
     );

@@ -1,6 +1,5 @@
 // lib/screens/home_screen.dart
 //
-
 // This is the main screen, now driven entirely by state instead of by data it
 // owns. It no longer keeps a list of jobs. Instead it watches the providers and
 // draws whatever they currently say:
@@ -19,6 +18,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../models/job.dart';
 import '../providers/job_providers.dart';
@@ -88,7 +88,14 @@ class _ResponsiveJobs extends StatelessWidget {
 
   // One place that turns an index into a JobCard, shared by both layouts.
   Widget _buildCard(BuildContext context, int index) {
-    return JobCard(job: jobs[index]);
+    final job = jobs[index];
+    return JobCard(
+      job: job,
+      // push stacks the detail on top of the list, so the back button peels it
+      // off and returns here. The URL is built from job.id, never the list
+      // index, so it always points at this exact job regardless of the filter.
+      onTap: () => context.push('/jobs/${job.id}'),
+    );
   }
 
   @override
