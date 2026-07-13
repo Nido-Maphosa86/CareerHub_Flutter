@@ -1,6 +1,6 @@
 // lib/widgets/job_status_badge.dart
 //
-// FILE SUMMARY (easy English)
+// FILE SUMMARY 
 // This is the small "Open" or "Closed" pill that sits in the corner of a job
 // card. It was pulled out of JobCard into its own file so it can be reused on
 // other screens later (a job detail page, an applications list) and tested on

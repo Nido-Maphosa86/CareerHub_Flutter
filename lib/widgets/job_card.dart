@@ -1,6 +1,6 @@
 // lib/widgets/job_card.dart
 //
-// FILE SUMMARY (easy English)
+// FILE SUMMARY
 // This is the card that shows one job. It takes a whole Job object and draws it.
 // A full-height coloured stripe runs down the left edge: it lights up for jobs
 // you can still apply to and goes muted for closed ones, so open versus closed
