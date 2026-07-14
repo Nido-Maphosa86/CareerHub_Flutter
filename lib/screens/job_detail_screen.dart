@@ -19,7 +19,9 @@ class JobDetailScreen extends ConsumerWidget {
   final int jobId;
 
   const JobDetailScreen({super.key, required this.jobId});
-
+  // ref is the Riverpod 
+  //consumer
+  //talk to riverpod providers
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Watch the RAW jobs by id, not the filtered list: a link to a job must

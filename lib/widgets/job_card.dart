@@ -11,6 +11,7 @@
 // correct in light and dark mode without any hardcoded values. The Open/Closed
 // pill lives in its own JobStatusBadge widget. The card can be given an optional
 // onTap so the screen decides where a tap goes (here, to the job's detail URL),
+
 // while the card itself stays a plain presentational widget.
 
 import 'package:flutter/material.dart';

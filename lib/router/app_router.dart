@@ -19,11 +19,11 @@ import '../widgets/scaffold_with_nav_bar.dart';
 
 // A single app-wide router instance.
 final GoRouter appRouter = GoRouter(
-  initialLocation: '/jobs',
+  initialLocation: '/jobs',//start on the Jobs tab the moments the app opens
   routes: [
     // The shell owns the tabs. indexedStack keeps every tab alive at once, so a
     // tab's scroll position and stack survive while another tab is on screen.
-    StatefulShellRoute.indexedStack(
+    StatefulShellRoute.indexedStack(// the shell owns the all tabs
       builder: (context, state, navigationShell) {
         // The frame (nav bar + current tab) is drawn by the shell widget.
         return ScaffoldWithNavBar(navigationShell: navigationShell);
@@ -38,6 +38,7 @@ final GoRouter appRouter = GoRouter(
               routes: [
                 // Nested, so it lives "inside" /jobs. Back from here returns to
                 // the list even when the app was opened straight to this URL.
+                //child route of /jobs
                 GoRoute(
                   path: ':id', // full path is /jobs/:id
                   builder: (context, state) {

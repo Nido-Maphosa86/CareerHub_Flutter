@@ -19,10 +19,17 @@ const String kFilterAll = 'All';
 const String kFilterRemote = 'Remote';
 const String kFilterFullTime = 'Full-time';
 
-const List<String> kFilterLabels = [kFilterAll, kFilterRemote, kFilterFullTime];
+const List<String> kFilterLabels = [
+  kFilterAll, 
+  kFilterRemote, 
+  kFilterFullTime
+  ];
 
 // Flip to true to make the jobs load fail, so the error UI can be seen and tested.
+// This is a StateProvider so the test can set it to true before pumping the app.
+//
 final shouldFailProvider = StateProvider<bool>((ref) => false);
+
 
 // The job list, loaded asynchronously. FutureProvider wraps the result in an
 // AsyncValue carrying loading, error, and data states. In Week 2 the body becomes
@@ -36,9 +43,11 @@ final jobsProvider = FutureProvider<List<Job>>((ref) async {
   return _seedJobs;
 });
 
+
 // The currently selected filter label. A single plain value the UI sets on tap.
 final selectedFilterProvider = StateProvider<String>((ref) => kFilterAll);
 
+//
 // The filtered list, derived from the jobs and the filter. Never stored, always
 // recomputed, so it can never fall out of step with either input.
 final filteredJobsProvider = Provider<AsyncValue<List<Job>>>((ref) {
@@ -84,7 +93,8 @@ bool _matchesFilter(Job job, String filter) {
 // least one job matches each filter label: Luno is Remote; Yoco and BBD are
 // Full-time.
 final List<Job> _seedJobs = [
-  Job(
+
+   Job(
     id: 1,
     title: 'Senior Flutter Developer',
     company: 'Yoco',
@@ -97,6 +107,8 @@ final List<Job> _seedJobs = [
         'Build and ship customer-facing mobile features across iOS and '
         'Android, and help shape the design system the whole team uses.',
   ),
+
+
   const Job(
     id: 2,
     title: 'Junior Mobile Developer',
@@ -105,6 +117,7 @@ final List<Job> _seedJobs = [
     employmentType: 'Internship',
     isOpen: true,
   ),
+
   Job.closed(
     id: 3,
     title: 'Backend Engineer (.NET)',
@@ -116,6 +129,8 @@ final List<Job> _seedJobs = [
     description:
         'Design and maintain APIs powering a national payments platform.',
   ),
+
+
   Job.remote(
     id: 4,
     title: 'Flutter Developer',
@@ -128,4 +143,5 @@ final List<Job> _seedJobs = [
         'Join a distributed team building crypto wallet experiences for '
         'a global audience.',
   ),
+
 ];

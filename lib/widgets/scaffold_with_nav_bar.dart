@@ -8,6 +8,7 @@
 // asks the router to switch branches; tapping the tab you are already on resets
 // that tab back to its root instead of doing nothing.
 
+//Bottom Navigation Bar
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -24,15 +25,15 @@ class ScaffoldWithNavBar extends StatelessWidget {
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         // Selected index comes straight from the router's state.
-        selectedIndex: navigationShell.currentIndex,
+        selectedIndex: navigationShell.currentIndex, //highlight the current tab
         onDestinationSelected: _onTap,
-        destinations: const [
-          NavigationDestination(
+        destinations: const [ //list of destinations for the navigation bar
+          NavigationDestination( // button position 0
             icon: Icon(Icons.work_outline),
             selectedIcon: Icon(Icons.work),
             label: 'Jobs',
           ),
-          NavigationDestination(
+          NavigationDestination( //button position 1
             icon: Icon(Icons.bookmark_outline),
             selectedIcon: Icon(Icons.bookmark),
             label: 'Saved',
