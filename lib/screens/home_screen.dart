@@ -1,16 +1,16 @@
 // lib/screens/home_screen.dart
 //
-// This is the main screen, now driven entirely by state instead of by data it
-// owns. It no longer keeps a list of jobs. Instead it watches the providers and
-// draws whatever they currently say:
+// This is the main screen, driven entirely by state instead of by data it owns.
+// It no longer keeps a list of jobs. Instead it watches the providers and draws
+// whatever they currently say:
 //   while the jobs are loading  -> a spinner in the middle of the screen
 //   if the load failed          -> an icon, a message, and a Retry button
 //   once the jobs arrive        -> the responsive list or grid of cards
-//   if the filter matched none  -> a short "nothing here" message, never a blank page
+//   if the filter matched none  -> a short "nothing here" message, never a blank
 //
-// Tapping a filter chip writes the new choice into the provider, the derived
-// filtered list recalculates itself, and this screen rebuilds automatically.
-// Nothing is passed down through constructors and there is no setState anywhere.
+// The list now comes from the network. The Retry button re-runs the real fetch
+// by invalidating jobsProvider, and the error branch is what shows when
+// the API is unreachable.
 //
 // The two ref rules, applied strictly:
 //   ref.watch inside build()    -> subscribe, so the UI rebuilds on change
@@ -22,6 +22,7 @@ import 'package:go_router/go_router.dart';
 
 import '../models/job.dart';
 import '../providers/job_providers.dart';
+import '../providers/jobs_notifier.dart';
 import '../widgets/job_card.dart';
 
 // The width in pixels where the layout switches from a list to a grid.
@@ -40,16 +41,15 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('CareerHub'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: const [_FailureToggleButton()],
       ),
       body: Column(
         children: [
           // The chip row stays pinned above the scrolling area.
           const _FilterChipsRow(),
 
-          // Expanded gives the area below a bounded height. Without it the
-          // Column would offer unbounded height and any scrolling child would
-          // throw "vertical viewport was given unbounded height".
+          // Expanded gives the area below a bounded height. Without it the Column
+          // would offer unbounded height and any scrolling child would throw
+          // "vertical viewport was given unbounded height".
           Expanded(
             // when() forces us to answer all three questions the async data can
             // ask: what do we draw while waiting, on failure, and on success?
@@ -57,13 +57,13 @@ class HomeScreen extends ConsumerWidget {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stackTrace) => _ErrorView(
                 // read: this runs on a button press, not during a build, so it
-                // must not subscribe. invalidate throws the cached value away
-                // and makes the provider fetch again.
+                // must not subscribe. invalidate throws the cached jobs away and
+                // makes the notifier fetch from the API again.
                 onRetry: () => ref.invalidate(jobsProvider),
               ),
               data: (jobs) {
-                // The fourth case hiding inside "data": the list can be empty.
-                // A filter that matches nothing still arrives here successfully.
+                // The fourth case hiding inside "data": the list can be empty. A
+                // filter that matches nothing still arrives here successfully.
                 // Without this check the user would stare at a blank white body.
                 if (jobs.isEmpty) return const _EmptyView();
 
@@ -79,7 +79,7 @@ class HomeScreen extends ConsumerWidget {
 
 // ---------------------------------------------------------------------------
 // The responsive list-or-grid, unchanged in spirit from Assignment 1.2.
-// It now receives its jobs as a parameter instead of owning them.
+// It receives its jobs as a parameter instead of owning them.
 // ---------------------------------------------------------------------------
 class _ResponsiveJobs extends StatelessWidget {
   final List<Job> jobs;
@@ -112,11 +112,17 @@ class _ResponsiveJobs extends StatelessWidget {
         }
 
         // Wide screen or tablet -> two-column grid.
+        // mainAxisExtent gives every card a fixed pixel height instead of a
+        // width-derived aspect ratio. A ratio-based height shrinks as the
+        // screen gets wider, which is exactly what caused cards with both a
+        // description and a closing date (the two optional footer sections)
+        // to overflow their allotted space. A fixed extent is tall enough for
+        // the longest card regardless of screen width.
         return GridView.builder(
           padding: const EdgeInsets.all(8),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            childAspectRatio: 1.3,
+            mainAxisExtent: 340,
             crossAxisSpacing: 8,
             mainAxisSpacing: 8,
           ),
@@ -197,7 +203,7 @@ class _ErrorView extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Check your connection and try again.',
+              'Check that the CareerHub API is running, then try again.',
               style: textTheme.bodySmall?.copyWith(
                 color: scheme.onSurfaceVariant,
               ),
@@ -256,30 +262,6 @@ class _EmptyView extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// A small app-bar switch that makes the jobs provider fail on purpose, so the
-// error branch can actually be seen and demonstrated.
-// ---------------------------------------------------------------------------
-class _FailureToggleButton extends ConsumerWidget {
-  const _FailureToggleButton();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final failing = ref.watch(shouldFailProvider);
-
-    return IconButton(
-      tooltip: failing ? 'Stop simulating failure' : 'Simulate a failure',
-      icon: Icon(failing ? Icons.cloud_off : Icons.cloud_done_outlined),
-      onPressed: () {
-        // read inside a callback: flip the switch, then throw the cache away so
-        // the provider runs again and picks up the new value.
-        ref.read(shouldFailProvider.notifier).state = !failing;
-        ref.invalidate(jobsProvider);
-      },
     );
   }
 }
