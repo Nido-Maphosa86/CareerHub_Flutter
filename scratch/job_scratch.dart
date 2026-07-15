@@ -11,7 +11,7 @@ import '../lib/models/job.dart';
 
 void main() {
   final fullyPopulated = Job(
-    id: 1,
+    id: '1',
     title: 'Senior Flutter Developer',
     company: 'Yoco',
     location: 'Cape Town',
@@ -23,7 +23,7 @@ void main() {
   );
 
   const requiredOnly = Job(
-    id: 2,
+    id: '2',
     title: 'Junior Mobile Developer',
     company: 'Praelexis',
     location: 'Stellenbosch',
@@ -32,7 +32,7 @@ void main() {
   );
 
   final closed = Job.closed(
-    id: 3,
+    id: '3',
     title: 'Backend Engineer (.NET)',
     company: 'BBD',
     location: 'Johannesburg',
@@ -42,7 +42,7 @@ void main() {
   );
 
   final remote = Job.remote(
-    id: 4,
+    id: '4',
     title: 'Flutter Developer',
     company: 'Luno',
     employmentType: 'Contract',

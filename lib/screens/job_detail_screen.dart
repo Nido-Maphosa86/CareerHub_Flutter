@@ -1,56 +1,66 @@
 // lib/screens/job_detail_screen.dart
 //
 // This screen shows the full details of one job. It does not receive a Job object
-// passed in through its constructor; it receives only an id taken from the URL,
-// then looks the job up itself. That keeps the URL the single source of truth, so
-// the very same screen works whether the user tapped a card or opened the app
-// straight to /jobs/<id> from a notification. It watches the raw, unfiltered jobs
-// so a job can always be found by id even when the list screen has a filter
-// applied, handles the loading and error states of that fetch, and shows a calm
-// "not found" screen if the id matches no job instead of crashing.
+// through its constructor; it receives only an id taken from the URL, then looks
+// the job up itself. That keeps the URL the single source of truth, so the very
+// same screen works whether the user tapped a card or opened the app straight to
+// /jobs/<id> from a notification. It now watches jobsProvider (the live,
+// network-backed list) and finds the job by id inside it, so a job still resolves
+// regardless of which filter chip is selected on the list screen. It handles the
+// loading and error states of that fetch, and shows a calm "not found" screen if
+// the id matches no job instead of crashing.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/job.dart';
-import '../providers/job_providers.dart';
+import '../providers/jobs_notifier.dart';
 
 class JobDetailScreen extends ConsumerWidget {
-  final int jobId;
+  // The id arrives from the URL as text. It is the API's Guid string, so it is a
+  // String, not an int.
+  final String jobId;
 
   const JobDetailScreen({super.key, required this.jobId});
-  // ref is the Riverpod 
-  //consumer
-  //talk to riverpod providers
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the RAW jobs by id, not the filtered list: a link to a job must
-    // resolve regardless of which filter chip happens to be selected, otherwise
-    // opening /jobs/1 while "Remote" is active would find nothing.
-    final AsyncValue<Job?> asyncJob = ref.watch(jobByIdProvider(jobId));
+    // Watch the whole live list, then pick the one job out of it by id. Watching
+    // the notifier (not the filtered list) means a link to a job resolves even
+    // when a filter chip is active on the list screen.
+    final AsyncValue<List<Job>> asyncJobs = ref.watch(jobsProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Job details'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: asyncJob.when(
+      body: asyncJobs.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) => const _DetailMessage(
           icon: Icons.cloud_off_outlined,
           title: 'We could not load this job',
-          message: 'Check your connection and try again.',
+          message: 'Check that the CareerHub API is running and try again.',
         ),
-        data: (job) {
+        data: (jobs) {
+          // Find the job whose id matches the URL. Returns null if none match.
+          Job? found;
+          for (final job in jobs) {
+            if (job.id == jobId) {
+              found = job;
+              break;
+            }
+          }
+
           // Loaded fine, but the id matched no job (stale or mistyped URL).
-          if (job == null) {
+          if (found == null) {
             return const _DetailMessage(
               icon: Icons.search_off_outlined,
               title: 'Job not found',
               message: 'This listing may have been closed or removed.',
             );
           }
-          return _JobDetailBody(job: job);
+          return _JobDetailBody(job: found);
         },
       ),
     );

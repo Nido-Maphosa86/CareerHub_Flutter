@@ -150,3 +150,170 @@ flutter run          # build and launch the app
 flutter test         # run the automated tests
 flutter doctor       # diagnose setup problems
 ```
+---
+
+# Assignment 2.1 — HTTP, Repositories & Code Generation
+
+Written decisions completed 14 July 2026, before any code was written.
+
+CareerHub no longer serves hardcoded jobs. The list is now fetched over HTTP from
+the CareerHub API through a Dio client that lives entirely inside a repository, a
+generated Riverpod notifier exposes that list to the UI, and the widget test
+overrides that notifier so it still passes without any network call.
+
+## Setup for this assignment
+
+Add the four packages, then generate the boilerplate.
+
+```powershell
+flutter pub add dio riverpod_annotation
+flutter pub add build_runner riverpod_generator --dev
+dart run build_runner build --delete-conflicting-outputs
+```
+
+Run against the API using the emulator's localhost alias.
+
+```powershell
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5000
+```
+
+## Question 1 — Why a DTO, not a fromJson on the Job model
+
+### Field-name mismatch table
+
+The CareerHub API returns each job as a `JobResponse`. Because ASP.NET serialises
+with camelCase and a `JsonStringEnumConverter`, the JSON keys and the Flutter
+model names line up like this:
+
+| API field (JSON key) | JSON type          | Flutter Job field | Mismatch                       |
+| -------------------- | ------------------ | ----------------- | ------------------------------ |
+| id                   | string (Guid)      | id                | value type: Guid vs old int    |
+| title                | string             | title             | none                           |
+| description          | string             | description       | none                           |
+| companyName          | string             | company           | name                           |
+| location             | string             | location          | none                           |
+| type                 | string ("FullTime")| employmentType    | name and value ("Full-time")   |
+| salaryMin            | number or null     | (not shown)       | extra API field                |
+| salaryMax            | number or null     | (not shown)       | extra API field                |
+| salaryDisplay        | string             | salary            | name                           |
+| postedAt             | string (date)      | (not shown)       | extra API field                |
+| isActive             | bool               | isOpen            | name                           |
+| applicationCount     | number             | (not shown)       | extra API field                |
+| closingDate          | string (date)      | closingDate       | none                           |
+| status               | string ("Active")  | (not shown)       | extra API field                |
+
+The real jolt is `id`. The API identifies a job with a Guid, so `Job.id` changed
+from `int` to `String`. The router, the detail screen, and the card tap all use
+that id, which is exactly why a rename or a type change hurts across many files
+when there is no buffer.
+
+### DTO protection: file-change count with and without a DTO
+
+If the API renames a field (say `companyName` becomes `employerName`) and there
+is a `JobDto` sitting between the API and the model, exactly one file changes:
+`lib/data/job_dto.dart`. The `Job.fromDto` mapping keeps the same model name, so
+nothing above it moves.
+
+If instead `fromJson` lived directly on `Job`, the rename would land inside the
+model, and every file that reads the affected field or constructs a `Job` from
+JSON would be in scope: `job.dart` itself, plus anything that depended on the old
+parsing. The number is different because the DTO gives the change one, and only
+one, place to land. The model keeps its stable names, and the rest of the app
+never learns the API moved.
+
+### Should the DTO capture fields the model does not use
+
+Yes. `JobDto` captures `salaryMin`, `salaryMax`, `postedAt`, `applicationCount`,
+and `status` even though no screen shows them today. Six months from now, when a
+"posted 3 days ago" label or a salary slider is requested, the data is already
+arriving and parsed. Adding the feature becomes a UI change, not a network-layer
+change. Dropping the fields now would mean re-touching the repository and the DTO
+later for something the API already sends for free.
+
+## Question 2 — Why the repository owns Dio, not the provider
+
+### Callers of the jobs list
+
+The classes that read the jobs list are `HomeScreen` (through
+`filteredJobsProvider`) and `JobDetailScreen` (through `jobsNotifierProvider`),
+with `filteredJobsProvider` itself sitting in between. None of them needs to know
+whether the jobs came from HTTP, a database, or a hardcoded list. They ask for a
+`List<Job>` wrapped in an `AsyncValue` and draw it.
+
+### Switching HTTP clients: file-change comparison
+
+With the repository pattern, swapping Dio for another client changes one file:
+`lib/data/jobs_repository.dart`. The `dio` provider and `JobsRepository` are the
+only code that names Dio.
+
+Without it, with Dio used directly inside the notifier, the change lands in
+`jobs_notifier.dart`, and any other place that had reached for Dio would move too.
+On a team where several people edit different files at once, the one-file version
+is the safer merge: the network swap never collides with UI work, because the UI
+files were never touched.
+
+## Question 3 — What @riverpod generates and why the red underline is expected
+
+`_$JobsNotifier` is the base class the code generator writes. It does not exist
+until generation runs, which is why the IDE underlines it in red the moment the
+class is typed. It comes from `riverpod_generator`, written into
+`lib/providers/jobs_notifier.g.dart`. The underline disappears the instant that
+file is produced, by running:
+
+```powershell
+dart run build_runner build --delete-conflicting-outputs
+```
+
+Inside the generated file, the provider declaration is `jobsNotifierProvider`.
+The generator decided its type argument (`List<Job>`) by reading the return type
+of the `build()` method: `Future<List<Job>>` tells it the notifier produces a
+`List<Job>` asynchronously.
+
+Before code generation, a developer wrote that declaration by hand. A plausible
+mistake was to type the provider as `AsyncNotifierProvider<JobsNotifier, List<Job>>`
+while `build()` actually returned a single `Job`, or a `List<JobDto>`. That
+compiles, because the declared type and the real return type are only checked
+where they meet at runtime, and then the UI receives a shape it did not expect and
+throws a type error mid-render. The generator makes this impossible because it
+never guesses the type: it copies it straight from `build()`, so the declaration
+and the method can never disagree.
+
+## Question 4 — Why the test overrides the provider instead of mocking the network
+
+When `flutter test` runs on a machine with no API server, the real `build()` calls
+`repository.getJobs()`, Dio attempts the request and fails to connect, and the
+`Future` completes with an error. The `AsyncNotifier` turns that into an
+`AsyncError`, and the widget tree renders the error branch (the "could not load"
+view), not the job cards. So the test fails on an assertion (the expected cards
+are missing), not on an unhandled exception, because the error is captured inside
+the `AsyncValue` rather than thrown out of the build.
+
+`overrideWith` replaces only the notifier behind `jobsNotifierProvider` with a
+fake that returns fixed jobs, and leaves every widget, route, and filter provider
+in the tree untouched.
+
+The single responsibility of the widget test is to prove the UI renders the jobs
+list and its states correctly given a known set of jobs. It is explicitly not
+responsible for testing that the JSON parses correctly (a unit test on
+`JobDto.fromJson` and `Job.fromDto` covers that) and not responsible for testing
+that the HTTP call reaches the right endpoint and handles real failures (an
+integration test against a running or mocked server covers that).
+
+## Screenshots
+
+Add each screenshot below after the live demo.
+
+### LogInterceptor output
+Terminal output showing the request to `/api/jobs` and the 200 response.
+
+### Live data
+The jobs list populated from the real CareerHub database.
+
+### Error state
+The app showing the error view with the API stopped.
+
+### Filter preserved on back navigation
+A filter chip active, a card tapped, back pressed, the chip still selected.
+
+### flutter test
+The terminal showing all tests passed with no network call made.
