@@ -1,18 +1,11 @@
 name: careerhub
-description: "A new Flutter project."
-# The following line prevents the package from being accidentally published to
-# pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
-
-# The following defines the version and build number for your application.
-# A version number is three numbers separated by dots, like 1.2.43
-# followed by an optional build number separated by a +.
+description: "CareerHub — Flutter mobile app."
+publish_to: 'none'
 version: 1.0.0+1
 
 environment:
   sdk: ^3.11.1
 
-# Dependencies specify other packages that your package needs in order to work.
 dependencies:
   flutter:
     sdk: flutter
@@ -21,7 +14,7 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # State management and navigation, from Assignments 1.3 and 1.4.
-  flutter_riverpod: ^3.0.3
+  flutter_riverpod: 3.0.3
   go_router: ^17.3.0
 
   # HTTP client used by the data layer to call the CareerHub API.
@@ -30,6 +23,13 @@ dependencies:
   # Annotations (@riverpod) read by the code generator. Runtime dependency
   # because the generated code references it.
   riverpod_annotation: ^3.0.0
+
+  # Assignment 2.2 additions. freezed_annotation carries the @freezed and
+  # @Default markers the models are decorated with; json_annotation carries
+  # @JsonKey and friends. Both are runtime dependencies because the generated
+  # code references types from them.
+  freezed_annotation: ^3.0.0
+  json_annotation: ^4.9.0
 
 dev_dependencies:
   flutter_test:
@@ -40,16 +40,14 @@ dev_dependencies:
 
   # Code-generation tooling. These run at build time only and are never bundled
   # into the compiled app: build_runner drives generation, riverpod_generator
-  # writes the .g.dart provider boilerplate from the @riverpod annotations.
+  # writes the .g.dart provider boilerplate from the @riverpod annotations,
+  # freezed writes the .freezed.dart files (==, hashCode, copyWith, toString)
+  # from @freezed annotations, and json_serializable writes the fromJson/toJson
+  # inside .g.dart for any Freezed class that also declares a fromJson factory.
   build_runner: ^2.4.13
   riverpod_generator: ^3.0.0
+  freezed: ^3.0.0
+  json_serializable: ^6.9.0
 
-# For information on the generic Dart part of this file, see the
-# following page: https://dart.dev/tools/pub/pubspec
-
-# The following section is specific to Flutter packages.
 flutter:
-
-  # The following line ensures that the Material Icons font is included with your
-  # application, so that you can use the icons in the material Icons class.
   uses-material-design: true

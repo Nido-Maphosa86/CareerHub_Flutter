@@ -33,7 +33,7 @@ final class JobsNotifierProvider
   JobsNotifier create() => JobsNotifier();
 }
 
-String _$jobsNotifierHash() => r'2a51f76f3de38cefa76037e9200712440f3ae9fc';
+String _$jobsNotifierHash() => r'8f07cee8ec50b9489acd33a9f2174e06c8ce2fe6';
 
 abstract class _$JobsNotifier extends $AsyncNotifier<List<Job>> {
   FutureOr<List<Job>> build();

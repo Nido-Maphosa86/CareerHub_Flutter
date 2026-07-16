@@ -4,7 +4,9 @@
 // this file: it now comes from jobsProvider, which fetches real jobs over
 // HTTP. This file keeps only the two filter pieces (the selected chip and the
 // derived, always-recomputed filtered list) plus the small label constants and
-// the one function that turns a chip label into a rule about a Job.
+// the one function that turns a chip label into a rule about a Job. _matchesFilter
+// is now written as a switch expression (Dart 3): each arm maps a chip label
+// straight to a bool, so the whole body reads as one expression.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -39,9 +41,9 @@ final selectedFilterProvider = StateProvider<String>((ref) => kFilterAll);
 
 // The filtered list, derived from the live jobs and the selected filter. Never
 // stored, always recomputed, so it can never fall out of step with either input.
-// It now watches jobsProvider (the network-backed list) in place of the
-// old hardcoded FutureProvider, but its shape (AsyncValue<List<Job>>) is
-// unchanged, so the screen that watches it did not have to change.
+// Because Job is now @freezed, two identical jobs are equal by value: Riverpod
+// can therefore skip notifying listeners when a refresh returns a job list that
+// has not actually changed.
 final filteredJobsProvider = Provider<AsyncValue<List<Job>>>((ref) {
   final asyncJobs = ref.watch(jobsProvider);
   final filter = ref.watch(selectedFilterProvider);
@@ -52,24 +54,15 @@ final filteredJobsProvider = Provider<AsyncValue<List<Job>>>((ref) {
   });
 });
 
-// The one place a filter label becomes a rule about a Job. Each label checks a
-// real field on the model, so a filter can never silently match nothing. The
-// four employment-type cases are deliberately identical in shape — each just
-// compares job.employmentType to its own label — so adding a fifth employment
-// type later is a one-line addition here, not a new code path.
-bool _matchesFilter(Job job, String filter) {
-  switch (filter) {
-    case kFilterRemote:
-      return job.location == kFilterRemote;
-    case kFilterFullTime:
-      return job.employmentType == kFilterFullTime;
-    case kFilterPartTime:
-      return job.employmentType == kFilterPartTime;
-    case kFilterContract:
-      return job.employmentType == kFilterContract;
-    case kFilterInternship:
-      return job.employmentType == kFilterInternship;
-    default:
-      return true;
-  }
-}
+// One switch expression, one arm per chip. The named constants (kFilterRemote,
+// kFilterFullTime, ...) are compile-time constants, so they are valid constant
+// patterns in a switch. The default arm (_) covers kFilterAll and any unknown
+// label — a filter that does not name a specific field keeps every job.
+bool _matchesFilter(Job job, String filter) => switch (filter) {
+      kFilterRemote => job.location == kFilterRemote,
+      kFilterFullTime => job.employmentType == kFilterFullTime,
+      kFilterPartTime => job.employmentType == kFilterPartTime,
+      kFilterContract => job.employmentType == kFilterContract,
+      kFilterInternship => job.employmentType == kFilterInternship,
+      _ => true,
+    };
