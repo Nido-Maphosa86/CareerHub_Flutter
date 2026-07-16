@@ -1,67 +1,48 @@
 // lib/data/job_dto.dart
 //
 // The DTO is a plain mirror of exactly what the CareerHub API sends back for one
-// job. Its field names match the JSON keys, not the Flutter model, so if the API
-// team renames a field only this file and the Job.fromDto mapping notice. It
-// captures every field the API returns, including the ones the UI does not show
-// yet (salaryMin, salaryMax, postedAt, applicationCount, status), so surfacing
-// them on a screen later needs no change to the network layer. fromJson does the
-// raw read only; turning a DTO into a UI Job happens in Job.fromDto, not here.
+// job. It is now an @freezed class with json_serializable attached, so the
+// hand-written fromJson from Assignment 2.1 is gone: the generator writes a
+// fromJson that reads every field the const factory constructor declares. The
+// Dart field names line up with the API's JSON keys one for one, so no
+// @JsonKey annotations are needed — if the API ever adds a key like "salaryMax"
+// we would only add the matching Dart field. Turning a DTO into a UI Job still
+// happens in Job.fromDto, not here.
 
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-//turning Json into a Dart object
-class JobDto {
-  final String id; // Guid string from the API
-  final String title;
-  final String description;
-  final String companyName; // API name; the model calls this "company"
-  final String location;
-  final String type; // enum serialised as a string, e.g. "FullTime"
-  final double? salaryMin; // captured, not shown in the UI yet
-  final double? salaryMax; // captured, not shown in the UI yet
-  final String salaryDisplay; // pre-formatted range; the model calls this "salary"
-  final DateTime postedAt; // captured, not shown yet
-  final bool isActive; // API name; the model calls this "isOpen"
-  final int applicationCount; // captured, not shown yet
-  final DateTime closingDate;
-  final String status; // "Active" / "Closed"; captured, derived elsewhere
+// Two part directives. .freezed.dart carries the ==/hashCode/copyWith/toString
+// mixin from Freezed; .g.dart carries the fromJson/toJson from json_serializable.
+part 'job_dto.freezed.dart';
+part 'job_dto.g.dart';
 
-  const JobDto({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.companyName,
-    required this.location,
-    required this.type,
-    required this.salaryMin,
-    required this.salaryMax,
-    required this.salaryDisplay,
-    required this.postedAt,
-    required this.isActive,
-    required this.applicationCount,
-    required this.closingDate,
-    required this.status,
-  });
+@freezed
+abstract class JobDto with _$JobDto {
+  // Every field from the API is declared once, here, as a named parameter with
+  // its Dart type. That declaration is what the generator reads to write both
+  // ==/hashCode and the JSON parser: String stays as-is, num? is widened to
+  // double?, DateTime strings are handed to DateTime.parse. Fields the UI does
+  // not surface yet (salaryMin, salaryMax, postedAt, applicationCount, status)
+  // are captured anyway so a future screen needs no network-layer change.
+  const factory JobDto({
+    required String id, // Guid string from the API
+    required String title,
+    required String description,
+    required String companyName, // API name; the model calls this "company"
+    required String location,
+    required String type, // enum serialised as a string, e.g. "FullTime"
+    required double? salaryMin,
+    required double? salaryMax,
+    required String salaryDisplay, // pre-formatted range; model calls it "salary"
+    required DateTime postedAt,
+    required bool isActive, // API name; the model calls this "isOpen"
+    required int applicationCount,
+    required DateTime closingDate,
+    required String status, // "Active" / "Closed"; captured, derived elsewhere
+  }) = _JobDto;
 
-  // Reads one job straight out of the API's JSON map. Numbers arrive as num, so
-  // they are widened to double; dates arrive as ISO strings and are parsed here.
-  //factory allow the contrutor to do some logic, like passing thatparameterlist
-  factory JobDto.fromJson(Map<String, dynamic> json) {
-    return JobDto(
-      id: json['id'] as String,
-      title: json['title'] as String,//look for key 'title' in the json map and cast it to String
-      description: json['description'] as String,
-      companyName: json['companyName'] as String,
-      location: json['location'] as String,
-      type: json['type'] as String,
-      salaryMin: (json['salaryMin'] as num?)?.toDouble(),
-      salaryMax: (json['salaryMax'] as num?)?.toDouble(),
-      salaryDisplay: json['salaryDisplay'] as String,
-      postedAt: DateTime.parse(json['postedAt'] as String),
-      isActive: json['isActive'] as bool,
-      applicationCount: json['applicationCount'] as int,
-      closingDate: DateTime.parse(json['closingDate'] as String),
-      status: json['status'] as String,
-    );
-  }
+  // One-line delegation to the generator. Every parsing rule lives in the
+  // generated _$JobDtoFromJson, so this file no longer changes when the API
+  // adds a field — the field just gets a new line in the factory above.
+  factory JobDto.fromJson(Map<String, dynamic> json) => _$JobDtoFromJson(json);
 }
