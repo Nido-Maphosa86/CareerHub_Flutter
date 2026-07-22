@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import '../features/applications/presentation/screens/applications_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/job_detail_screen.dart';
 import '../screens/saved_screen.dart';
@@ -35,6 +36,14 @@ final GoRouter appRouter = GoRouter(
             GoRoute(
               path: '/saved',
               builder: (context, state) => const SavedScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/applications',
+              builder: (context, state) => const ApplicationsScreen(),
             ),
           ],
         ),

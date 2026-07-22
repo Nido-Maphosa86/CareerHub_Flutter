@@ -5,6 +5,9 @@ enum ApplicationStatus {
   rejected,
   offered;
 
+//job application status display label
+// Returns a human-readable label for the application status.
+//job status life cycle is as follows:
   String get displayLabel => switch (this) {
     ApplicationStatus.submitted => 'Submitted',
     ApplicationStatus.underReview => 'Under Review',
@@ -13,6 +16,7 @@ enum ApplicationStatus {
     ApplicationStatus.offered => 'Offered',
   };
 
+//from Api converts the string value from the API to the corresponding ApplicationStatus enum value.
   static ApplicationStatus fromApi(String value) => switch (value) {
     'Submitted' => ApplicationStatus.submitted,
     'UnderReview' => ApplicationStatus.underReview,
