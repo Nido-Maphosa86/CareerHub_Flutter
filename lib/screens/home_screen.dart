@@ -8,9 +8,9 @@
 //   once the jobs arrive        -> the responsive list or grid of cards
 //   if the filter matched none  -> a short "nothing here" message, never a blank
 //
-// The list now comes from the network. The Retry button re-runs the real fetch
-// by invalidating jobsProvider, and the error branch is what shows when
-// the API is unreachable.
+// The list now comes from the network AND from Isar cache. The Retry button
+// re-runs the real fetch by invalidating jobsProvider, and the error branch is
+// what shows when the API is unreachable AND no cache exists.
 //
 // The two ref rules, applied strictly:
 //   ref.watch inside build()    -> subscribe, so the UI rebuilds on change
@@ -21,6 +21,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/job.dart';
+import '../providers/connectivity_provider.dart';
+import '../providers/filter_notifier.dart';
 import '../providers/job_providers.dart';
 import '../providers/jobs_notifier.dart';
 import '../widgets/job_card.dart';
@@ -37,6 +39,10 @@ class HomeScreen extends ConsumerWidget {
     // whether that is because the jobs finished loading or a chip was tapped.
     final AsyncValue<List<Job>> asyncJobs = ref.watch(filteredJobsProvider);
 
+    // watch: the offline banner must appear/disappear automatically as
+    // connectivity changes, with no user interaction needed.
+    final isOffline = ref.watch(isOfflineProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('CareerHub'),
@@ -44,6 +50,8 @@ class HomeScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
+          if (isOffline) const _OfflineBanner(),
+
           // The chip row stays pinned above the scrolling area.
           const _FilterChipsRow(),
 
@@ -70,6 +78,34 @@ class HomeScreen extends ConsumerWidget {
                 return _ResponsiveJobs(jobs: jobs);
               },
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shown when the device has no active network connection. Appears and
+// disappears automatically as isOfflineProvider changes — no tap required.
+// ---------------------------------------------------------------------------
+class _OfflineBanner extends StatelessWidget {
+  const _OfflineBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      color: scheme.errorContainer,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Icon(Icons.wifi_off, size: 16, color: scheme.onErrorContainer),
+          const SizedBox(width: 8),
+          Text(
+            'You are offline — showing cached data.',
+            style: TextStyle(color: scheme.onErrorContainer, fontSize: 13),
           ),
         ],
       ),
@@ -112,12 +148,6 @@ class _ResponsiveJobs extends StatelessWidget {
         }
 
         // Wide screen or tablet -> two-column grid.
-        // mainAxisExtent gives every card a fixed pixel height instead of a
-        // width-derived aspect ratio. A ratio-based height shrinks as the
-        // screen gets wider, which is exactly what caused cards with both a
-        // description and a closing date (the two optional footer sections)
-        // to overflow their allotted space. A fixed extent is tall enough for
-        // the longest card regardless of screen width.
         return GridView.builder(
           padding: const EdgeInsets.all(8),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -137,7 +167,8 @@ class _ResponsiveJobs extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // The filter chips. Each chip reads its selected look from the provider, so the
 // provider is the single source of truth: there is no local "which one is
-// picked" variable anywhere.
+// picked" variable anywhere. filterProvider persists the selection to
+// SharedPreferences, so it survives an app restart.
 // ---------------------------------------------------------------------------
 class _FilterChipsRow extends ConsumerWidget {
   const _FilterChipsRow();
@@ -145,7 +176,7 @@ class _FilterChipsRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // watch: the chips must repaint when the selection changes.
-    final selected = ref.watch(selectedFilterProvider);
+    final selected = ref.watch(filterProvider);
 
     return SizedBox(
       height: 56,
@@ -161,9 +192,9 @@ class _FilterChipsRow extends ConsumerWidget {
                   label: Text(label),
                   selected: label == selected,
                   onSelected: (_) {
-                    // read: a tap is an action, not a paint. We only need the
-                    // notifier once, to write the new value into it.
-                    ref.read(selectedFilterProvider.notifier).state = label;
+                    // read: a tap is an action, not a paint. select() writes
+                    // to SharedPreferences and updates state in one call.
+                    ref.read(filterProvider.notifier).select(label);
                   },
                 ),
               ),

@@ -1,29 +1,15 @@
-// test/widget_test.dart
-//
-// These tests check the real CareerHub app. In production jobsProvider
-// calls the live API, but flutter test runs on machines with no server, so the
-// real build() would throw a Dio connection error and every test would fail. The
-// fix is to override jobsProvider inside each test's ProviderScope with a
-// fake notifier that returns a fixed list of jobs after the same delay the app
-// used to simulate. overrideWith swaps only the notifier that produces the list;
-// the widgets, the router, and the filter providers all stay exactly as they are
-// in the app, so these tests still exercise the real UI. The fake's list is now
-// the single source of truth the assertions match against, since the hardcoded
-// jobs no longer live in production code.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:careerhub/core/prefs_provider.dart';
 import 'package:careerhub/main.dart';
 import 'package:careerhub/models/job.dart';
 import 'package:careerhub/providers/jobs_notifier.dart';
 
 const Duration _pastTheDelay = Duration(seconds: 2);
 
-// The fixed jobs the tests assert on. Kept identical in shape to the seed data
-// the app shipped with in Assignment 1.4: three open, one closed; one with no
-// salary (so "Market-related" is shown); one Internship.
 final List<Job> _fakeJobs = [
   Job(
     id: '1',
@@ -67,10 +53,6 @@ final List<Job> _fakeJobs = [
   ),
 ];
 
-// A stand-in for the real JobsNotifier that never touches the network. It
-// extends the generated JobsNotifier (which itself extends _$JobsNotifier) and
-// fully overrides build(), so the repository is never called. The 1.5s delay
-// preserves the loading-spinner assertion.
 class _FakeJobsNotifier extends JobsNotifier {
   @override
   Future<List<Job>> build() async {
@@ -79,32 +61,30 @@ class _FakeJobsNotifier extends JobsNotifier {
   }
 }
 
-// Wraps the app with the fake notifier installed in place of the real one.
-Widget _app() => ProviderScope(
-      overrides: [
-        jobsProvider.overrideWith(_FakeJobsNotifier.new),
-      ],
-      child: const CareerHubApp(),
-    );
+Future<Widget> _app() async {
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
+  return ProviderScope(
+    overrides: [
+      jobsProvider.overrideWith(_FakeJobsNotifier.new),
+      prefsProvider.overrideWithValue(prefs),
+    ],
+    child: const CareerHubApp(),
+  );
+}
 
 void main() {
   testWidgets('starts on the jobs tab and shows the nav bar', (tester) async {
-    await tester.pumpWidget(_app());
+    await tester.pumpWidget(await _app());
 
-    // GoRouter's initialLocation is /jobs, so the list screen is already here.
-    // The NavigationBar destinations are visible immediately, even before the
-    // jobs finish loading.
     expect(find.text('Jobs'), findsOneWidget);
     expect(find.text('Saved'), findsOneWidget);
 
-    // The fake notifier still has a pending 1.5s timer at this point, because
-    // nothing above has waited for it. Letting it complete here, before the
-    // test ends, avoids "A Timer is still pending" when the tree is torn down.
     await tester.pump(_pastTheDelay);
   });
 
   testWidgets('shows a spinner while loading, then hides it', (tester) async {
-    await tester.pumpWidget(_app());
+    await tester.pumpWidget(await _app());
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
@@ -115,7 +95,7 @@ void main() {
   });
 
   testWidgets('renders all four job cards once loaded', (tester) async {
-    await tester.pumpWidget(_app());
+    await tester.pumpWidget(await _app());
     await tester.pump(_pastTheDelay);
 
     expect(find.text('Senior Flutter Developer'), findsOneWidget);
@@ -125,7 +105,7 @@ void main() {
   });
 
   testWidgets('status badges reflect each job state', (tester) async {
-    await tester.pumpWidget(_app());
+    await tester.pumpWidget(await _app());
     await tester.pump(_pastTheDelay);
 
     expect(find.text('Closed'), findsOneWidget);
@@ -133,7 +113,7 @@ void main() {
   });
 
   testWidgets('salary and type pills render safely', (tester) async {
-    await tester.pumpWidget(_app());
+    await tester.pumpWidget(await _app());
     await tester.pump(_pastTheDelay);
 
     expect(find.text('Market-related'), findsOneWidget);
@@ -142,14 +122,12 @@ void main() {
   });
 
   testWidgets('tapping a card opens its detail screen', (tester) async {
-    await tester.pumpWidget(_app());
+    await tester.pumpWidget(await _app());
     await tester.pump(_pastTheDelay);
 
-    // Tap the first job card.
     await tester.tap(find.text('Senior Flutter Developer'));
     await tester.pumpAndSettle();
 
-    // The detail screen shows its own app bar title and the full description.
     expect(find.text('Job details'), findsOneWidget);
     expect(find.text('About the role'), findsOneWidget);
   });
