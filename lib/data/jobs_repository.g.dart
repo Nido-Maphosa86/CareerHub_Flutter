@@ -88,4 +88,4 @@ final class JobsRepositoryProvider
   }
 }
 
-String _$jobsRepositoryHash() => r'697d55ff7c33af66151c331a0ad73f030a41944e';
+String _$jobsRepositoryHash() => r'a1206edf14921cb4367e3093d95a516bbd98fb4e';
