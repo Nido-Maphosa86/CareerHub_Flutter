@@ -1,20 +1,10 @@
 // lib/models/auth_state.dart
-//
-// The sealed AuthState type drives every authentication-related decision in the
-// app. Because it is sealed, the Dart compiler knows every possible subtype and
-// enforces exhaustiveness on switch expressions — missing a case is a compile
-// error, not a runtime bug. No code generation is needed; sealed classes are a
-// native Dart 3 feature.
-//
-// The four subtypes model the complete authentication lifecycle:
-//   Unauthenticated -> Authenticating -> Authenticated
-//                   -> AuthError
-//
-// A plain Dart enum cannot represent this hierarchy because Authenticated must
-// carry a User payload and AuthError must carry a String payload. Enum variants
-// cannot hold different data types — every value of an enum is the same type
-// with no attached fields.
 
+//Your app needs to know, at any given moment, 
+//where the user stands in the login process. 
+//Are they logged in? Not logged in? Currently trying to log in? Did their last attempt fail?
+// This file defines exactly those possibilities, as one type with four distinct shapes.
+//A sealed class locks down a fixed, known set of possible shapes for something — each shape can carry its own different data — and in exchange, the compiler guarantees you've handled every single one, catching mistakes before the app ever runs.
 import 'user.dart';
 
 // The sealed keyword means every subtype must be declared in this file. That

@@ -1,21 +1,8 @@
 // lib/data/auth_repository.dart
 //
-// The authentication data layer. All JWT handling, token storage, and auth API
-// calls live here. Nothing above this file needs to know about FlutterSecureStorage
-// or the auth endpoint details.
-//
-// Two design decisions are mandatory:
-// 1. This file creates its own plain Dio (no interceptors, except LogInterceptor
-//    for debugging). Using the app-wide dioProvider would cause an infinite
-//    loop: a 401 on the refresh endpoint would trigger AuthInterceptor, which
-//    would call tryRefresh(), which would send to the refresh endpoint, which
-//    would get a 401, which would trigger AuthInterceptor again — forever.
-// 2. JWT decoding is a private static method so it can be called from both
-//    isTokenExpired() and decodeUser() without duplicating the Base64URL logic.
-//
-// NOTE: the backend's /api/auth/login and /api/auth/refresh endpoints return
-// a single field named "token" — not "accessToken" — and no refresh token at
-// all. The field name below is matched to what the API actually sends.
+//This is the only file in your entire app that knows how to talk to the login and refresh API endpoints,
+// how to store tokens securely on the device, and how to read a User's identity out of a token. 
+//Nothing else in your app is allowed to touch these details directly.
 
 import 'dart:convert';
 
@@ -30,8 +17,7 @@ import 'api_result.dart';
 part 'auth_repository.g.dart';
 
 // Storage keys used in both this file and auth_interceptor.dart. Keep them in
-// sync — if they diverge the interceptor reads from a different slot than the
-// one the repository writes to.
+//These are just the "labels" under which tokens get saved in secure storage — like naming two drawers "access_token" and "refresh_token."
 const _accessTokenKey = 'access_token';
 const _refreshTokenKey = 'refresh_token';
 
@@ -72,9 +58,9 @@ class AuthRepository {
   // refresh attempt, which is safer than assuming a malformed token is valid.
   bool isTokenExpired(String token) {
     try {
-      final payload = _decodePayload(token);
-      final exp = payload['exp'];
-      if (exp == null) return false;
+      final payload = _decodePayload(token);//decodes the token's contents
+      final exp = payload['exp'];//pulls out the expiry claim, a number representing "this token dies at this exact moment"
+      if (exp == null) return false;//it never expires
       final expiry = DateTime.fromMillisecondsSinceEpoch((exp as int) * 1000);
       return DateTime.now().isAfter(expiry);
     } catch (_) {
