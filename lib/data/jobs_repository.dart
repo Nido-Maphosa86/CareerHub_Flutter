@@ -28,11 +28,11 @@ Dio dio(Ref ref) {
   return client;
 }
 
-@riverpod
+@riverpod /// builds a JobsRepository provider that can be injected into other providers or widgets. It takes a Ref object as an argument, which allows it to read other providers.
 JobsRepository jobsRepository(Ref ref) {
   return JobsRepository(
-    dio: ref.watch(dioProvider),
-    isar: ref.watch(isarProvider),
+    dio: ref.watch(dioProvider), //https client for making network requests to the API. It is provided by the dio provider.
+    isar: ref.watch(isarProvider),// Isar database instance for caching job data locally. It is provided by the isarProvider.
   );
 }
 
@@ -43,12 +43,18 @@ class JobsRepository {
   JobsRepository({required Dio dio, required Isar isar})
       : _dio = dio,
         _isar = isar;
+ 
 
+ //accesses the Isar database to retrieve all cached jobs, 
+ //converts them from JobCache objects to Job objects, and returns them as a list. 
+ //This allows the app to display job listings even when offline.
+ //no network requests are made in this method; it only interacts with the local cache.
   Future<List<Job>> getCachedJobs() async {
     final cached = await _isar.jobCaches.where().findAll();
     return cached.map(_cacheToJob).toList();
   }
-
+   
+   //Sends the real GET request, unwraps the paging envelope, parses rows into Job objects
   Future<ApiResult<List<Job>>> getJobs() async {
     try {
       final response = await _dio.get<Map<String, dynamic>>('/api/jobs');
@@ -59,8 +65,8 @@ class JobsRepository {
       final (dtos: _, :jobs) = _parseRows(rows);
 
       await _isar.writeTxn(() async {
-        await _isar.jobCaches.clear();
-        await _isar.jobCaches.putAll(jobs.map(_jobToCache).toList());
+        await _isar.jobCaches.clear();//wipes the cache before saving the new jobs to ensure that the cache always reflects the latest data from the API. This prevents stale or outdated job listings from being displayed to the user.
+        await _isar.jobCaches.putAll(jobs.map(_jobToCache).toList());//saves the newly fetched jobs to the Isar cache. Each Job object is converted to a JobCache object before being stored, allowing for offline access to the job listings.
       });
 
       return Success(jobs);
