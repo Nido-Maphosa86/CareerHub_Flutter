@@ -49,12 +49,17 @@ final class DioProvider extends $FunctionalProvider<Dio, Dio, Dio>
 
 String _$dioHash() => r'22886f6f2d09c9eb26618661979cadc1d2dfb5fa';
 
+/// builds a JobsRepository provider that can be injected into other providers or widgets. It takes a Ref object as an argument, which allows it to read other providers.
+
 @ProviderFor(jobsRepository)
 const jobsRepositoryProvider = JobsRepositoryProvider._();
+
+/// builds a JobsRepository provider that can be injected into other providers or widgets. It takes a Ref object as an argument, which allows it to read other providers.
 
 final class JobsRepositoryProvider
     extends $FunctionalProvider<JobsRepository, JobsRepository, JobsRepository>
     with $Provider<JobsRepository> {
+  /// builds a JobsRepository provider that can be injected into other providers or widgets. It takes a Ref object as an argument, which allows it to read other providers.
   const JobsRepositoryProvider._()
     : super(
         from: null,
