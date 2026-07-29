@@ -15,7 +15,7 @@ final isOfflineProvider = Provider<bool>((ref) {
   return result.when(
     data: (results) =>
         results.isEmpty || results.every((r) => r == ConnectivityResult.none),
-    loading: () => false,
-    error: (_, __) => false,
+    loading: () => false,//while waiting for the very first reading (right at app start), assume online. This avoids incorrectly flashing the offline banner before a real reading has arrived.
+    error: (_, __) => false,//if reading connectivity somehow failed, also default to assuming online.
   );
 });

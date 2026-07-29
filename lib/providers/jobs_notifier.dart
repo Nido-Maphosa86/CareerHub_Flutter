@@ -5,7 +5,11 @@ import '../data/jobs_repository.dart';
 import '../models/job.dart';
 
 part 'jobs_notifier.g.dart';
+//What this file is for
 
+//This is the heart of Assignment 2.3 — 
+//the exact sequence that makes cached jobs appear instantly, 
+//then quietly tries to refresh in the background.
 @riverpod
 class JobsNotifier extends _$JobsNotifier {
   @override

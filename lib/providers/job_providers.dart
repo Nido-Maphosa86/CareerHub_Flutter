@@ -5,6 +5,10 @@
 // filter chip (persisted to SharedPreferences), and returns only the jobs
 // that match.
 
+
+
+//This is the file that combines "all the jobs" with "which chip is selected" 
+//and produces "just the jobs that should be shown right now."
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/job.dart';
