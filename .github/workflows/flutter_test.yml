@@ -1,0 +1,63 @@
+# .github/workflows/flutter_test.yml
+#
+# Runs flutter analyze and flutter test --coverage on every push and pull
+# request to the main branch. Uploads coverage/lcov.info as a workflow
+# artifact so coverage reports can be inspected without re-running the suite.
+#
+# The Patrol integration test is NOT included here — Patrol requires a
+# connected Android device or emulator, which is not available in a standard
+# GitHub Actions runner. Patrol tests are run manually or in a separate
+# device-farm workflow.
+
+name: Flutter CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Analyze and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1 — Check out the repository at the commit that triggered the run.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2 — Install the Flutter SDK. The version is read from
+      # .flutter-version if present, or defaults to the stable channel.
+      # Pinning to stable ensures reproducible builds across runs.
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # Step 3 — Download all pub dependencies declared in pubspec.yaml.
+      # Cached by the flutter-action setup step when cache: true is set.
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Step 4 — Run the static analyser. The workflow fails if any error
+      # is reported — warnings are allowed but errors block the merge.
+      - name: Analyze
+        run: flutter analyze --fatal-infos
+
+      # Step 5 — Run all unit and widget tests with line coverage enabled.
+      # Generates coverage/lcov.info which the next step uploads.
+      # The workflow fails if any test fails.
+      - name: Test with coverage
+        run: flutter test --coverage
+
+      # Step 6 — Upload the coverage report as a downloadable artifact so
+      # reviewers can inspect coverage without re-running the suite locally.
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/lcov.info
+          # Keep the artifact for 7 days — enough time for PR review.
+          retention-days: 7
