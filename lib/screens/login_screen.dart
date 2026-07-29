@@ -1,65 +1,62 @@
 // lib/screens/login_screen.dart
 //
-// The login screen. It is a ConsumerStatefulWidget because it owns two
-// TextEditingControllers that must be disposed when the screen is removed
-// from the tree. Disposing them prevents memory leaks.
+// Assignment 3.1 refactor: ConsumerStatefulWidget -> HookConsumerWidget.
+// The entire State subclass, createState(), dispose(), and the _submit()
+// instance method are gone. The file now contains exactly one class.
 //
-// The screen never calls a navigation method. GoRouter's redirect callback
-// watches authStateListenableProvider and fires automatically when
-// AuthNotifier emits Authenticated — the router drives the transition,
-// not this screen. This keeps the screen's responsibility narrow: collect
-// credentials and call login(). The router decides where to go next.
+// useTextEditingController() replaces field declarations on a State class.
+// The hook framework stores the controller in a numerically indexed list on
+// the element — not in a named field — and calls dispose() automatically
+// when the widget unmounts. There is no way to forget disposal.
+//
+// The submit() local function captures the controllers from the same call
+// frame, so it needs no parameters and no access to instance state.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../models/auth_state.dart';
 import '../providers/auth_notifier.dart';
 
-class LoginScreen extends ConsumerStatefulWidget {
+class LoginScreen extends HookConsumerWidget {
   const LoginScreen({super.key});
 
   @override
-  ConsumerState<LoginScreen> createState() => _LoginScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    // useTextEditingController() creates the controller on the first build and
+    // returns the same instance on every subsequent build. When the widget
+    // unmounts, the hook framework disposes it automatically — no dispose()
+    // override needed anywhere in this file.
+    final emailController = useTextEditingController();
+    final passwordController = useTextEditingController();
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
-  // Each controller tracks the text in its field and must be disposed to free
-  // the underlying platform resources when the widget leaves the tree.
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Watch authProvider so the widget rebuilds whenever auth state
-    // changes — this is what makes the spinner appear and disappear and the
-    // error message show without any additional setState calls.
     final authAsync = ref.watch(authProvider);
     final authState = authAsync.hasValue ? authAsync.value : null;
 
-    // True only while the login network call is in progress. The Authenticating
-    // subtype is set synchronously at the start of login() before any await,
-    // so the spinner appears in the same frame as the tap.
+    // True only while the login network call is in flight. Authenticating is
+    // set synchronously at the start of login() before any await, so the
+    // spinner appears in the same frame as the tap.
     final isLoading = authState is Authenticating;
 
-    // Non-null only when login failed. Uses Dart 3 pattern matching to
-    // destructure the message field directly from the AuthError subtype without
-    // a cast or a null check on a separate variable.
+    // Non-null only when the last login attempt failed. Pattern-matches on
+    // the AuthError subtype to destructure the message field directly.
     final errorMessage = switch (authState) {
       AuthError(:final message) => message,
       _ => null,
     };
 
+    // Local function captures controllers from this call frame — no instance
+    // state needed. ref.read is correct because this is a callback, not a
+    // reactive subscription.
+    void submit() {
+      ref.read(authProvider.notifier).login(
+            emailController.text.trim(),
+            passwordController.text,
+          );
+    }
+
     return Scaffold(
-      // No AppBar — the login screen is a full-screen gate. Showing a title bar
-      // here would suggest the user is inside the authenticated app shell.
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -68,7 +65,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // App identity
                 Text(
                   'CareerHub',
                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
@@ -86,11 +82,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 40),
-
-                // Email field. textInputAction.next moves focus to the password
-                // field without closing the keyboard.
                 TextField(
-                  controller: _emailController,
+                  controller: emailController,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   enabled: !isLoading,
@@ -101,16 +94,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // Password field. textInputAction.done closes the keyboard and
-                // calls _submit, so the user can sign in without tapping the
-                // button.
                 TextField(
-                  controller: _passwordController,
+                  controller: passwordController,
                   obscureText: true,
                   textInputAction: TextInputAction.done,
                   enabled: !isLoading,
-                  onSubmitted: (_) => _submit(),
+                  // Calls the local submit function when the user presses done
+                  // on the keyboard — no instance method reference needed.
+                  onSubmitted: (_) => submit(),
                   decoration: const InputDecoration(
                     labelText: 'Password',
                     border: OutlineInputBorder(),
@@ -118,10 +109,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // Error message — only rendered when errorMessage is non-null.
-                // Placed between the password field and the button so it is
-                // clearly associated with the failed login attempt.
                 if (errorMessage != null) ...[
                   Text(
                     errorMessage,
@@ -133,13 +120,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 12),
                 ],
-
-                // Sign in button. Disabled (onPressed is null) while loading so
-                // the user cannot trigger a second login call before the first
-                // one resolves. Shows a small spinner inside the button instead
-                // of the label text when loading is true.
                 FilledButton(
-                  onPressed: isLoading ? null : _submit,
+                  onPressed: isLoading ? null : submit,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: isLoading
@@ -160,15 +142,5 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
       ),
     );
-  }
-
-  // Reads the notifier (not watches — this is a callback, not a build) and
-  // calls login with the trimmed email and the raw password. Trimming the email
-  // prevents invisible whitespace from causing "invalid credentials" errors.
-  void _submit() {
-    ref.read(authProvider.notifier).login(
-          _emailController.text.trim(),
-          _passwordController.text,
-        );
   }
 }

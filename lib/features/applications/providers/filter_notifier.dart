@@ -1,7 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../data/applications_repository.dart';
-import '../domain/application_status.dart';
 
 part 'filter_notifier.g.dart';
 

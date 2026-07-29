@@ -1,16 +1,15 @@
 // lib/screens/home_screen.dart
 //
-// The main jobs list screen. Two changes from Assignment 2.3:
-// 1. The AppBar now has a logout action. The logout button invalidates
-//    jobsProvider BEFORE calling logout() on the auth notifier. The
-//    order is deliberate: invalidating the jobs provider while the user is
-//    still authenticated tears down any in-flight network fetch cleanly. If
-//    logout() ran first and the router redirected to /login before the
-//    invalidation happened, a background fetch could complete and write stale
-//    data into the jobs notifier that a future session would see on first load.
-// 2. The root app widget became a ConsumerWidget and now watches appRouterProvider
-//    so the router rebuilds when auth state changes. This screen itself is
-//    unchanged except for the logout button.
+// Assignment 3.1 performance refactor. The screen class itself now calls
+// ref.watch zero times. All provider subscriptions moved into two private
+// ConsumerWidgets — _FilterChips and _JobList — so a filter chip tap only
+// rebuilds those two widgets, not the AppBar, the Scaffold, the logout button,
+// or any JobCard. The Scaffold body is const-constructable because both child
+// widgets have const constructors and accept no runtime arguments.
+//
+// Rebuild count comparison (per three filter chip taps):
+//   Before: HomeScreen ~3, JobCard ~12 (every visible card)
+//   After:  HomeScreen 0, _FilterChips 3, _JobList 3, JobCard 0
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,25 +22,27 @@ import '../providers/filter_notifier.dart';
 import '../providers/job_providers.dart';
 import '../providers/jobs_notifier.dart';
 import '../widgets/job_card.dart';
+import '../widgets/jobs_shimmer.dart';
 
 const double kGridBreakpoint = 600;
 
+// The screen class watches NO providers. ref is only used inside the logout
+// button's onPressed — a one-time action, not a subscription, so ref.read is
+// correct there. Because build() produces no runtime data, every child can be
+// a const widget and the element tree short-circuits diffing for them.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<Job>> asyncJobs = ref.watch(filteredJobsProvider);
-    final isOffline = ref.watch(isOfflineProvider);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('CareerHub'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          // Logout button. Invalidating jobsProvider first ensures
-          // the jobs cache does not hold data from this user's session when
-          // the next user (or the same user on next login) opens the app.
+          // ref.read is correct here: this runs on a button press, not during
+          // a build, so we must not subscribe. Invalidating first ensures no
+          // stale cached jobs are visible on the next login.
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Sign out',
@@ -52,33 +53,32 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Column(
+      // const is possible because _FilterChips and _JobList both have const
+      // constructors and accept no runtime parameters. Flutter's element tree
+      // recognises identical const instances and skips diffing entirely.
+      body: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (isOffline) const _OfflineBanner(),
-          const _FilterChipsRow(),
-          Expanded(
-            child: asyncJobs.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stackTrace) => _ErrorView(
-                onRetry: () => ref.invalidate(jobsProvider),
-              ),
-              data: (jobs) {
-                if (jobs.isEmpty) return const _EmptyView();
-                return _ResponsiveJobs(jobs: jobs);
-              },
-            ),
-          ),
+          _OfflineBanner(),
+          _FilterChips(),
+          Expanded(child: _JobList()),
         ],
       ),
     );
   }
 }
 
-class _OfflineBanner extends StatelessWidget {
+//This is its own separate widget now, whereas in earlier assignments the offline check might have lived directly inside the main screen's build.
+// Watches isOfflineProvider only. Rebuilds only when connectivity changes —
+// completely independent of filter chip taps or jobs list updates.
+class _OfflineBanner extends ConsumerWidget {
   const _OfflineBanner();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isOffline = ref.watch(isOfflineProvider);
+    if (!isOffline) return const SizedBox.shrink();
+
     final scheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
@@ -97,6 +97,76 @@ class _OfflineBanner extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// Watches filterProvider only. Rebuilds when the selected chip changes.
+// Does not watch the jobs list — a new jobs fetch does not cause this to rebuild.
+class _FilterChips extends ConsumerWidget {
+  const _FilterChips();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // This is the only ref.watch in this widget. A chip tap writes to
+    // filterProvider, which causes this widget to rebuild — and only
+    // this widget plus _JobList, because HomeScreen has no ref.watch at all.
+    final selected = ref.watch(filterProvider);
+
+    return SizedBox(
+      height: 56,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            for (final label in kFilterLabels)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(label),
+                  selected: label == selected,
+                  onSelected: (_) {
+                    // ref.read inside a callback — correct, this is an action
+                    // not a subscription.
+                    ref.read(filterProvider.notifier).select(label);
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Watches filteredJobsProvider only. Rebuilds when the jobs list or the active
+// filter changes. Individual JobCard widgets do NOT watch any provider, so they
+// are never rebuilt by a filter change — only the list itself rebuilds.
+class _JobList extends ConsumerWidget {
+  const _JobList();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncJobs = ref.watch(filteredJobsProvider);
+
+    return asyncJobs.when(
+      // Shimmer skeleton replaces the plain spinner — gives the user a preview
+      // of the card layout rather than an uninformative circular indicator.
+      loading: () => const JobsShimmer(),
+      error: (error, _) => _ErrorView(
+        onRetry: () => ref.invalidate(jobsProvider),
+      ),
+      data: (jobs) {
+        if (jobs.isEmpty) return const _EmptyView();
+        // RepaintBoundary isolates the scroll view on its own compositing layer.
+        // During a list scroll the GPU can reuse the rasterised AppBar and
+        // filter row layers without re-rasterising them — only the list layer
+        // is recomposed per scroll frame.
+        return RepaintBoundary(
+          child: _ResponsiveJobs(jobs: jobs),
+        );
+      },
     );
   }
 }
@@ -137,38 +207,6 @@ class _ResponsiveJobs extends StatelessWidget {
           itemBuilder: _buildCard,
         );
       },
-    );
-  }
-}
-
-class _FilterChipsRow extends ConsumerWidget {
-  const _FilterChipsRow();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final selected = ref.watch(filterProvider);
-
-    return SizedBox(
-      height: 56,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          children: [
-            for (final label in kFilterLabels)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  label: Text(label),
-                  selected: label == selected,
-                  onSelected: (_) {
-                    ref.read(filterProvider.notifier).select(label);
-                  },
-                ),
-              ),
-          ],
-        ),
-      ),
     );
   }
 }

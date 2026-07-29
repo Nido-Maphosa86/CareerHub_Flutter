@@ -1,33 +1,24 @@
 // lib/screens/job_detail_screen.dart
 //
-// This screen shows the full details of one job. It does not receive a Job object
-// through its constructor; it receives only an id taken from the URL, then looks
-// the job up itself. That keeps the URL the single source of truth, so the very
-// same screen works whether the user tapped a card or opened the app straight to
-// /jobs/<id> from a notification. It now watches jobsProvider (the live,
-// network-backed list) and finds the job by id inside it, so a job still resolves
-// regardless of which filter chip is selected on the list screen. It handles the
-// loading and error states of that fetch, and shows a calm "not found" screen if
-// the id matches no job instead of crashing.
+// Shows the full details of one job. Receives only a job ID from the URL and
+// looks the job up in the live list, so the URL is the single source of truth.
+// Assignment 3.1 adds an Apply button that navigates to /jobs/:id/apply using
+// GoRouter's context.push so the back button returns to this screen.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../models/job.dart';
 import '../providers/jobs_notifier.dart';
 
 class JobDetailScreen extends ConsumerWidget {
-  // The id arrives from the URL as text. It is the API's Guid string, so it is a
-  // String, not an int.
   final String jobId;
 
   const JobDetailScreen({super.key, required this.jobId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the whole live list, then pick the one job out of it by id. Watching
-    // the notifier (not the filtered list) means a link to a job resolves even
-    // when a filter chip is active on the list screen.
     final AsyncValue<List<Job>> asyncJobs = ref.watch(jobsProvider);
 
     return Scaffold(
@@ -43,7 +34,6 @@ class JobDetailScreen extends ConsumerWidget {
           message: 'Check that the CareerHub API is running and try again.',
         ),
         data: (jobs) {
-          // Find the job whose id matches the URL. Returns null if none match.
           Job? found;
           for (final job in jobs) {
             if (job.id == jobId) {
@@ -52,7 +42,6 @@ class JobDetailScreen extends ConsumerWidget {
             }
           }
 
-          // Loaded fine, but the id matched no job (stale or mistyped URL).
           if (found == null) {
             return const _DetailMessage(
               icon: Icons.search_off_outlined,
@@ -60,18 +49,18 @@ class JobDetailScreen extends ConsumerWidget {
               message: 'This listing may have been closed or removed.',
             );
           }
-          return _JobDetailBody(job: found);
+          return _JobDetailBody(job: found, jobId: jobId);
         },
       ),
     );
   }
 }
 
-// The full details layout, shown once a real job has been found.
 class _JobDetailBody extends StatelessWidget {
   final Job job;
+  final String jobId;
 
-  const _JobDetailBody({required this.job});
+  const _JobDetailBody({required this.job, required this.jobId});
 
   @override
   Widget build(BuildContext context) {
@@ -90,34 +79,35 @@ class _JobDetailBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-
-        // Every meaningful field, one row each. Optional fields only appear when
-        // they exist, so a missing value leaves no empty row.
         _DetailRow(label: 'Status', value: job.isOpen ? 'Open' : 'Closed'),
         _DetailRow(label: 'Employment type', value: job.employmentType),
         _DetailRow(label: 'Salary', value: job.displaySalary),
         _DetailRow(
           label: 'Applications',
-          value: job.canApply ? 'Open for applications' : 'Not accepting applications',
+          value: job.canApply
+              ? 'Open for applications'
+              : 'Not accepting applications',
         ),
         if (job.closingDate != null)
           _DetailRow(
             label: 'Closing date',
             value: _formatDate(job.closingDate!),
           ),
-
         if (job.description != null) ...[
           const SizedBox(height: 20),
           Text('About the role', style: textTheme.titleMedium),
           const SizedBox(height: 8),
           Text(job.description!, style: textTheme.bodyMedium),
         ],
-
         const SizedBox(height: 28),
+        // Navigates to /jobs/:id/apply using GoRouter push so the back button
+        // returns to this detail screen. Disabled when the job is closed or
+        // the closing date has passed (job.canApply returns false).
         FilledButton(
-          // Enabled only when the job can actually be applied to.
-          onPressed: job.canApply ? () {} : null,
-          child: const Text('Apply now'),
+          onPressed: job.canApply
+              ? () => context.push('/jobs/$jobId/apply')
+              : null,
+          child: const Text('Apply for this job'),
         ),
       ],
     );
@@ -132,7 +122,6 @@ class _JobDetailBody extends StatelessWidget {
   }
 }
 
-// One labelled fact, e.g. "Salary: R55 000 - R75 000 per month".
 class _DetailRow extends StatelessWidget {
   final String label;
   final String value;
@@ -167,7 +156,6 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-// Shared centred message used for the error and not-found states.
 class _DetailMessage extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -192,7 +180,8 @@ class _DetailMessage extends StatelessWidget {
           children: [
             Icon(icon, size: 48, color: scheme.onSurfaceVariant),
             const SizedBox(height: 16),
-            Text(title, style: textTheme.titleMedium, textAlign: TextAlign.center),
+            Text(title,
+                style: textTheme.titleMedium, textAlign: TextAlign.center),
             const SizedBox(height: 8),
             Text(
               message,
