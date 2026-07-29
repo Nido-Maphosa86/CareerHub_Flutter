@@ -41,5 +41,11 @@ dev_dependencies:
   json_serializable: ^6.9.0
   isar_community_generator: ^3.3.0
 
+  # Assignment 3.2 additions.
+  mocktail: ^0.3.0
+  patrol: ^3.14.0
+  integration_test:
+    sdk: flutter
+
 flutter:
   uses-material-design: true
