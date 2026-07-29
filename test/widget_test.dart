@@ -7,6 +7,7 @@ import 'package:careerhub/core/prefs_provider.dart';
 import 'package:careerhub/main.dart';
 import 'package:careerhub/models/job.dart';
 import 'package:careerhub/providers/jobs_notifier.dart';
+import 'package:careerhub/widgets/jobs_shimmer.dart';
 
 const Duration _pastTheDelay = Duration(seconds: 2);
 
@@ -86,11 +87,11 @@ void main() {
   testWidgets('shows a spinner while loading, then hides it', (tester) async {
     await tester.pumpWidget(await _app());
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(JobsShimmer), findsOneWidget);
 
     await tester.pump(_pastTheDelay);
 
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(JobsShimmer), findsNothing);
     expect(find.text('Senior Flutter Developer'), findsOneWidget);
   });
 
@@ -118,7 +119,7 @@ void main() {
 
     expect(find.text('Market-related'), findsOneWidget);
     expect(find.text('null'), findsNothing);
-    expect(find.text('Internship'), findsOneWidget);
+    expect(find.text('Internship'), findsNWidgets(2));
   });
 
   testWidgets('tapping a card opens its detail screen', (tester) async {
