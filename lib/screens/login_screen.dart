@@ -26,6 +26,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   // Each controller tracks the text in its field and must be disposed to free
   // the underlying platform resources when the widget leaves the tree.
+  //Two TextEditingControllers track whatever the user types into the email and password fields.
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 

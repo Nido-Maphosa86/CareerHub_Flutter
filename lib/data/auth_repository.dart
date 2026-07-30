@@ -14,6 +14,9 @@ import '../models/auth_state.dart';
 import '../models/user.dart';
 import 'api_result.dart';
 
+//What this file is for
+//The only file in the whole app that knows how to talk to the login endpoints, 
+//safely store the resulting token, and decode a User's identity out of it.
 part 'auth_repository.g.dart';
 
 // Storage keys used in both this file and auth_interceptor.dart. Keep them in
@@ -81,6 +84,7 @@ class AuthRepository {
     );
   }
 
+  //Sends the login request
   // Authenticates the user. On success writes the token to secure storage and
   // returns the decoded User. On 400/401 returns a Failure with a credential
   // error message. On any other network error returns a Failure with a generic

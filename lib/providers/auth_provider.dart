@@ -1,22 +1,6 @@
-// lib/providers/auth_provider.dart
-//
-// Two plain providers that exist solely to break dependency cycles.
-//
-// onUnauthenticatedProvider — AuthInterceptor (data layer) needs to trigger a
-// rebuild of AuthNotifier when a refresh definitively fails. But auth_interceptor
-// cannot import auth_notifier (data importing providers), and auth_notifier
-// cannot import auth_interceptor (circular). The solution is a plain callback
-// provider: auth_interceptor imports only this file (which has no Riverpod
-// annotation and no code generation), reads the callback, and calls it. The
-// callback itself imports auth_notifier, but that is fine because it lives here
-// in the providers layer.
-//
-// authStateListenableProvider — GoRouter's refreshListenable expects a
-// ChangeNotifier, not a Riverpod provider. AuthStateListenable wraps
-// authProvider in a ChangeNotifier so the router rebuilds its redirect
-// logic whenever auth state changes, without the router itself needing to import
-// Riverpod internals.
-
+//What this file is for
+//Two small providers that exist purely to solve plumbing problems — 
+//connecting pieces of the app that can't directly import each other without creating a broken circular dependency.
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

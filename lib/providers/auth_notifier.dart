@@ -1,17 +1,5 @@
-// lib/providers/auth_notifier.dart
-//
-// The single source of truth for authentication state. Every part of the app
-// that needs to know whether a user is signed in watches authNotifierProvider.
-//
-// build() runs on every cold boot and on every ref.invalidate(authNotifierProvider)
-// call (which AuthInterceptor triggers after a definitively failed refresh). It
-// checks secure storage for a token, tries a refresh if the token is expired, and
-// returns the appropriate AuthState.
-//
-// logout() does not invalidate any data providers. That responsibility belongs
-// to the caller (the logout button in home_screen.dart). This keeps auth_notifier
-// free of imports from the data layer and prevents circular imports.
-
+//This is the single source of truth for whether someone is logged in. 
+//Every screen that needs to know the current auth status watches this one provider.
 import 'package:careerhub/data/api_result.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
