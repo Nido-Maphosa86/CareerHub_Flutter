@@ -11,6 +11,10 @@
 //   Before: HomeScreen ~3, JobCard ~12 (every visible card)
 //   After:  HomeScreen 0, _FilterChips 3, _JobList 3, JobCard 0
 
+//_OfflineBanner — watches only isOfflineProvider
+//_FilterChips — watches only filterProvider
+//_JobList — watches only filteredJobsProvider
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
