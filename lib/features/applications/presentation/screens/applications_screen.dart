@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../providers/application_hub_provider.dart';
 import '../../domain/application_status.dart';
 import '../../providers/applications_notifier.dart';
 import '../../providers/connectivity_provider.dart';
@@ -13,6 +14,11 @@ class ApplicationsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watched first so the hub connection is established (and its
+    // disconnect scheduled via ref.onDispose) as soon as this screen enters
+    // the widget tree — see Part 6 of Assignment 3.3.
+    ref.watch(applicationHubProvider);
+
     final asyncApps = ref.watch(filteredApplicationsProvider);
     final selectedFilter = ref.watch(applicationFilterProvider);
     final isOffline = ref.watch(isOfflineProvider);

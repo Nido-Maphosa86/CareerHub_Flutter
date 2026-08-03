@@ -6,6 +6,12 @@ import '../models/job.dart';
 
 part 'jobs_notifier.g.dart';
 
+// No 401 auto-logout pattern here (contrast with ApplicationsNotifier and
+// ApplyNotifier) — job browsing on this API is not behind an authenticated
+// endpoint, and adding an unconditional ref.read(authRepositoryProvider)
+// here previously broke JobsNotifier's disposal semantics under
+// ProviderContainer.dispose() in test/unit/jobs_notifier_test.dart. See the
+// Part 5 section of README.md.
 @riverpod
 class JobsNotifier extends _$JobsNotifier {
   @override
@@ -21,7 +27,7 @@ class JobsNotifier extends _$JobsNotifier {
 
     return switch (result) {
       Success(:final data) => data,
-      Failure(:final message) when cachedJobs.isNotEmpty => cachedJobs,
+      Failure() when cachedJobs.isNotEmpty => cachedJobs,
       Failure(:final message) => throw Exception(message),
     };
   }

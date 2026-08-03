@@ -10,6 +10,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:isar_community/isar.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../config/app_config.dart';
 import '../core/isar_provider.dart';
 import '../models/job.dart';
 import '../providers/auth_provider.dart';
@@ -25,10 +26,7 @@ part 'jobs_repository.g.dart';
 // transparently refreshes the token on 401 (from AuthInterceptor.onError).
 @riverpod
 Dio dio(Ref ref) {
-  final baseUrl = const String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:5000',
-  );
+  final baseUrl = AppConfig.apiBaseUrl;
 
   final client = Dio(
     BaseOptions(
@@ -38,11 +36,15 @@ Dio dio(Ref ref) {
     ),
   );
 
-  // LogInterceptor first so every outgoing request and incoming response is
-  // printed to the terminal before AuthInterceptor adds/modifies headers.
-  client.interceptors.add(
-    LogInterceptor(requestBody: true, responseBody: true),
-  );
+  // Request/response body logging only in dev — a prod build must never print
+  // Bearer tokens or applicant PII to a device log.
+  if (AppConfig.environment == 'dev') {
+    // LogInterceptor first so every outgoing request and incoming response is
+    // printed to the terminal before AuthInterceptor adds/modifies headers.
+    client.interceptors.add(
+      LogInterceptor(requestBody: true, responseBody: true),
+    );
+  }
 
   // A second plain Dio used by the interceptor for the refresh call and for
   // retrying requests after a successful refresh. It must be separate from
@@ -108,7 +110,7 @@ class JobsRepository {
 
       return Success(jobs);
     } on DioException catch (e) {
-      return Failure(
+      return Failure<List<Job>>(
         _friendlyErrorMessage(e),
         statusCode: e.response?.statusCode,
       );
@@ -157,23 +159,31 @@ class JobsRepository {
     return (dtos: dtos, jobs: jobs);
   }
 
-  // Maps a DioException to a human-readable message. Guard clauses on the
-  // badResponse arms distinguish server errors (5xx) from client errors (4xx).
+  // Maps a DioException to a human-readable message. A null statusCode means
+  // no HTTP response was ever received (transport-level failure) — the
+  // DioExceptionType tells us whether that was a flat-out unreachable server
+  // or a timeout partway through. A non-null statusCode means the server did
+  // respond, and each status code gets its own specific message rather than
+  // a single generic string for every non-200 response.
   String _friendlyErrorMessage(DioException e) {
-    final status = e.response?.statusCode ?? 0;
-    return switch (e.type) {
-      DioExceptionType.connectionTimeout =>
-        'The server took too long to accept the connection.',
-      DioExceptionType.sendTimeout => 'The request took too long to send.',
-      DioExceptionType.receiveTimeout =>
-        'The server took too long to respond.',
-      DioExceptionType.connectionError =>
-        'Could not reach the server. Check that the CareerHub API is running.',
-      DioExceptionType.badResponse when status >= 500 =>
-        'The server is having trouble right now. Please try again later.',
-      DioExceptionType.badResponse when status >= 400 =>
-        'The request could not be completed ($status).',
-      _ => 'Something went wrong. Please try again.',
+    final status = e.response?.statusCode;
+
+    if (status == null) {
+      return switch (e.type) {
+        DioExceptionType.connectionError =>
+          'Could not reach the server. Check your network connection.',
+        DioExceptionType.connectionTimeout ||
+        DioExceptionType.receiveTimeout =>
+          'The connection timed out. Please try again.',
+        _ => 'Something went wrong. Please try again.',
+      };
+    }
+
+    return switch (status) {
+      401 => 'Your session has expired. Please sign in again.',
+      404 => 'No jobs were found.',
+      503 => 'The server is temporarily unavailable. Please try again later.',
+      _ => 'The request could not be completed ($status).',
     };
   }
 }

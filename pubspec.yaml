@@ -31,6 +31,12 @@ dependencies:
   flutter_form_builder: ^10.0.1
   form_builder_validators: ^11.1.2
 
+  # Assignment 3.3 additions.
+  # Pinned to ^2.1.0 in the assignment brief, but no such version is
+  # published on pub.dev — 1.4.4 is the latest available release, so that
+  # is what is used here (documented in README.md under Part 6).
+  signalr_netcore: ^1.4.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

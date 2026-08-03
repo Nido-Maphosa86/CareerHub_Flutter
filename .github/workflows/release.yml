@@ -1,0 +1,74 @@
+# .github/workflows/release.yml
+#
+# Release pipeline (Assignment 3.3). Distinct from flutter_test.yml, which is
+# the quality gate that runs on every push and pull request. This workflow
+# runs only on push to main, after that gate has already had its chance to
+# fail on a pull request, and produces a release Android App Bundle ready to
+# hand to the Play Store (once signed — see the Release Pipeline section of
+# README.md for the signing gap this workflow deliberately leaves open).
+
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-release:
+    name: Build release AAB
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1 — Check out the repository at the commit that triggered the run.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2 — Install the Flutter SDK, pinned to the stable channel, with
+      # its dependency cache enabled so repeated runs are faster.
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # Step 3 — Download all pub dependencies declared in pubspec.yaml.
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Step 4 — Write the production config from the CONFIG_PROD_JSON secret.
+      # This file is never committed (see .gitignore) — CI is the only place
+      # that ever materialises it, and only for the build step below.
+      - name: Write production config
+        run: echo '${{ secrets.CONFIG_PROD_JSON }}' > config.prod.json
+
+      # Step 5 — Static analysis. Fails the workflow only on a reported
+      # error — pre-existing info/warning-level lints (e.g. in the scratch/
+      # folder) must not block a release the way they would a PR quality
+      # gate.
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      # Step 6 — Run the test suite against the DEV config, never prod. Tests
+      # must never exercise the production API URL, so this step writes its
+      # own config.dev.json from a separate secret rather than reusing the
+      # production file written in Step 4.
+      - name: Write dev config for tests
+        run: echo '${{ secrets.CONFIG_DEV_JSON }}' > config.dev.json
+
+      - name: Test (dev config)
+        run: flutter test --dart-define-from-file=config.dev.json
+
+      # Step 7 — Build the release App Bundle using the production config
+      # written in Step 4.
+      - name: Build release App Bundle
+        run: flutter build appbundle --release --dart-define-from-file=config.prod.json
+
+      # Step 8 — Upload the unsigned AAB as a workflow artifact. See the
+      # Release Pipeline section of README.md for what signing this artifact
+      # for the Play Store still requires.
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30

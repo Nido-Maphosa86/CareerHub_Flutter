@@ -51,8 +51,13 @@ class JobCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-            // The status stripe. Colour alone communicates open vs closed.
-            Container(width: 6, color: stripeColor),
+            // The status stripe is purely decorative — JobStatusBadge already
+            // announces "Open"/"Closed" as text, so the stripe is excluded
+            // from the semantics tree rather than read out a second time
+            // with no label of its own.
+            ExcludeSemantics(
+              child: Container(width: 6, color: stripeColor),
+            ),
 
             Expanded(
               child: Padding(
