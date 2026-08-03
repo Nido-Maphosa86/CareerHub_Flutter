@@ -44,7 +44,7 @@ class HomeScreen extends ConsumerWidget {
           // a build, so we must not subscribe. Invalidating first ensures no
           // stale cached jobs are visible on the next login.
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, semanticLabel: 'Sign out'),
             tooltip: 'Sign out',
             onPressed: () {
               ref.invalidate(jobsProvider);

@@ -18,14 +18,23 @@ class ApplicationStatusBadge extends StatelessWidget {
       ApplicationStatus.offered => (Colors.amber.shade700, status.displayLabel),
     };
 
-    return Chip(
-      label: Text(
-        label,
-        style: const TextStyle(color: Colors.white, fontSize: 11),
+    // The status is conveyed by both colour and the label text, but the
+    // explicit Semantics wrapper guarantees a screen reader announces the
+    // status name as text rather than relying on the Chip's default
+    // semantics tree, regardless of how the surrounding list is traversed.
+    return Semantics(
+      label: '$label status',
+      child: ExcludeSemantics(
+        child: Chip(
+          label: Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 11),
+          ),
+          backgroundColor: color,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          visualDensity: VisualDensity.compact,
+        ),
       ),
-      backgroundColor: color,
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      visualDensity: VisualDensity.compact,
     );
   }
 }

@@ -10,6 +10,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../config/app_config.dart';
 import '../models/user.dart';
 import 'api_result.dart';
 
@@ -24,14 +25,14 @@ const _refreshTokenKey = 'refresh_token';
 // with only a baseUrl so it is never intercepted by AuthInterceptor.
 @riverpod
 AuthRepository authRepository(Ref ref) {
-  final baseUrl = const String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:5000',
-  );
-  final dio = Dio(BaseOptions(baseUrl: baseUrl));
-  // Debugging interceptor — prints the full request/response for every auth
-  // call so login failures are visible in the terminal.
-  dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
+  final dio = Dio(BaseOptions(baseUrl: AppConfig.apiBaseUrl));
+  // Debugging interceptor — dev only, so a prod build never prints login
+  // credentials or tokens to a device log.
+  if (AppConfig.environment == 'dev') {
+    dio.interceptors.add(
+      LogInterceptor(requestBody: true, responseBody: true),
+    );
+  }
   return AuthRepository(
     dio: dio,
     storage: const FlutterSecureStorage(),

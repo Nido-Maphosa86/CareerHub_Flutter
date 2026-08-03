@@ -104,6 +104,10 @@ class _JobDetailBody extends StatelessWidget {
         // returns to this detail screen. Disabled when the job is closed or
         // the closing date has passed (job.canApply returns false).
         FilledButton(
+          // Material 3's FilledButton defaults to minimumSize: Size(64, 40) —
+          // an 8dp-short height that fails the 48x48dp minimum tap target
+          // accessibility guideline. Explicit override closes that gap.
+          style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
           onPressed: job.canApply
               ? () => context.push('/jobs/$jobId/apply')
               : null,

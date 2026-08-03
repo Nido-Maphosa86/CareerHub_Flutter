@@ -42,7 +42,7 @@ final class ApplicationFilterNotifierProvider
 }
 
 String _$applicationFilterNotifierHash() =>
-    r'226191a71f4e47e41e612cd1c6f2f2c1dc686c07';
+    r'3704dc3fddf82b0371df0b15234d5257fedeee57';
 
 abstract class _$ApplicationFilterNotifier extends $Notifier<String> {
   String build();

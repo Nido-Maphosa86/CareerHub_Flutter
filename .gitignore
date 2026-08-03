@@ -43,3 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Environment configuration (Assignment 3.3). These carry the dev/prod API
+# base URLs and must never be committed — CI writes them from GitHub secrets
+# (CONFIG_DEV_JSON / CONFIG_PROD_JSON) at build time instead.
+config.dev.json
+config.prod.json

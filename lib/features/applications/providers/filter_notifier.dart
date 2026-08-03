@@ -1,6 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../data/applications_repository.dart';
+import '../../../core/prefs_provider.dart';
 
 part 'filter_notifier.g.dart';
 
@@ -11,12 +11,12 @@ const _prefKey = 'application_filter';
 class ApplicationFilterNotifier extends _$ApplicationFilterNotifier {
   @override
   String build() {
-    final prefs = ref.read(sharedPreferencesProvider);
+    final prefs = ref.read(prefsProvider);
     return prefs.getString(_prefKey) ?? kFilterAll;
   }
 
   void select(String filter) {
-    final prefs = ref.read(sharedPreferencesProvider);
+    final prefs = ref.read(prefsProvider);
     prefs.setString(_prefKey, filter);
     state = filter;
   }

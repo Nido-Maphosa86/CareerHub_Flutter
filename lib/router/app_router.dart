@@ -8,6 +8,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../features/applications/presentation/screens/applications_screen.dart';
 import '../models/auth_state.dart';
 import '../providers/auth_notifier.dart';
 import '../providers/auth_provider.dart';
@@ -84,6 +85,17 @@ GoRouter appRouter(Ref ref) {
               GoRoute(
                 path: '/saved',
                 builder: (context, state) => const SavedScreen(),
+              ),
+            ],
+          ),
+          // Third branch, matching the third NavigationDestination
+          // ("Applications") in ScaffoldWithNavBar. Previously missing —
+          // tapping the tab called goBranch(2) with no matching branch.
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/applications',
+                builder: (context, state) => const ApplicationsScreen(),
               ),
             ],
           ),

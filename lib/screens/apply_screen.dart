@@ -20,6 +20,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../features/applications/providers/apply_notifier.dart';
 import '../models/auth_state.dart';
 import '../providers/auth_notifier.dart';
 
@@ -41,16 +42,45 @@ class ApplyScreen extends HookConsumerWidget {
     final authState = authAsync.hasValue ? authAsync.value : null;
     final userEmail = authState is Authenticated ? authState.user.email : '';
 
-    void submit() {
+    Future<void> submit() async {
       // saveAndValidate() calls save() first, which writes each field's current
       // value into FormBuilderState.value. The validator for the start date
       // reads the saved DateTime — if validate() ran before save(), the field
       // value would be null and the date comparison would behave incorrectly.
-      if (formKey.currentState!.saveAndValidate()) {
+      if (!formKey.currentState!.saveAndValidate()) return;
+
+      final values = formKey.currentState!.value;
+      final startDate = values['start_date'] as DateTime?;
+
+      try {
+        await ref.read(applyProvider.notifier).submit(
+          jobId: jobId,
+          payload: {
+            'fullName': values['full_name'],
+            'email': values['email'],
+            'coverLetter': values['cover_letter'],
+            'yearsExperience': int.tryParse(
+              values['years_experience']?.toString() ?? '',
+            ),
+            'startDate': startDate?.toIso8601String(),
+            'portfolioUrl': values['portfolio_url'],
+          },
+        );
+
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Application submitted!')),
         );
         Navigator.of(context).pop();
+      } catch (e) {
+        // On a 401 the notifier already logged out and GoRouter's redirect
+        // will replace this screen with /login — context is unmounted by
+        // the time that happens, so this SnackBar simply never shows for
+        // that case rather than needing a special branch here.
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
       }
     }
 
